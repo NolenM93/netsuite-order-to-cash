@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SuiteCloud
+.suitecloud/
+suitecloud.config.local.js
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,28 @@
+{
+  "name": "order-to-cash-toolkit",
+  "version": "1.0.0",
+  "description": "NetSuite Order-to-Cash Toolkit - SuiteScript 2.1 SDF Project",
+  "author": "Nolen Millington",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NolenM93/netsuite-order-to-cash.git"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/ __tests__ --ext .js",
+    "lint:fix": "eslint src/ __tests__ --ext .js --fix",
+    "validate": "echo 'SuiteCloud CLI validation requires NetSuite account authentication. See README for deployment instructions.'"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0"
+  },
+  "optionalDependencies": {
+    "@oracle/suitecloud-cli": "^1.9.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
