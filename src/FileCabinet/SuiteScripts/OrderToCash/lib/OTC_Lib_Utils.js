@@ -65,6 +65,24 @@ define([], () => {
   };
 
   /**
+   * Get script parameter with fallback, treating '', null, undefined as unset.
+   * NetSuite returns '' for unset parameters, not null.
+   * @param {Function} getParamFn - Function that retrieves param (e.g. script.getParameter)
+   * @param {string} paramId - Parameter ID
+   * @param {*} defaultValue - Default value if param is unset
+   * @param {boolean} [isNumeric=false] - If true, coerce to Number
+   * @returns {*} Parameter value or default
+   */
+  const getScriptParam = (getParamFn, paramId, defaultValue, isNumeric = false) => {
+    const raw = getParamFn({ name: paramId });
+    const isUnset = raw === null || raw === undefined || raw === '';
+    if (isUnset) {
+      return defaultValue;
+    }
+    return isNumeric ? Number(raw) : raw;
+  };
+
+  /**
    * Calculate credit utilization percentage
    * @param {number} currentBalance - Current AR balance
    * @param {number} creditLimit - Customer credit limit
@@ -287,6 +305,7 @@ define([], () => {
     DEFAULTS,
     CREDIT_STATUS,
     DEFAULT_DISCOUNT_TIERS,
+    getScriptParam,
     escapeHtml,
     calculateCreditUtilization,
     getCreditStatus,

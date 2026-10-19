@@ -14,26 +14,18 @@ define(['N/record', 'N/search', 'N/ui/serverWidget', 'N/runtime', 'N/error', '..
   (record, search, serverWidget, runtime, error, utils) => {
 
     /**
-     * Gets script parameter with fallback to default
-     * @param {string} paramId - Parameter ID
-     * @param {*} defaultValue - Default value if param not set
-     * @returns {*} Parameter value or default
-     */
-    const getParam = (paramId, defaultValue) => {
-      const script = runtime.getCurrentScript();
-      const value = script.getParameter({ name: paramId });
-      return value ?? defaultValue;
-    };
-
-    /**
      * Gets script configuration from parameters
      * @returns {Object} Configuration object
      */
-    const getConfig = () => ({
-      largeOrderThreshold: getParam('custscript_otc_large_order_amt', utils.DEFAULTS.LARGE_ORDER_THRESHOLD),
-      creditWarningPct: getParam('custscript_otc_credit_warn_pct', utils.DEFAULTS.CREDIT_WARNING_PERCENT),
-      taskAssignee: getParam('custscript_otc_task_assignee', null)
-    });
+    const getConfig = () => {
+      const script = runtime.getCurrentScript();
+      const getParamFn = (opts) => script.getParameter(opts);
+      return {
+        largeOrderThreshold: utils.getScriptParam(getParamFn, 'custscript_otc_large_order_amt', utils.DEFAULTS.LARGE_ORDER_THRESHOLD, true),
+        creditWarningPct: utils.getScriptParam(getParamFn, 'custscript_otc_credit_warn_pct', utils.DEFAULTS.CREDIT_WARNING_PERCENT, true),
+        taskAssignee: utils.getScriptParam(getParamFn, 'custscript_otc_task_assignee', null)
+      };
+    };
 
     /**
      * Adds credit status information to the sales order form

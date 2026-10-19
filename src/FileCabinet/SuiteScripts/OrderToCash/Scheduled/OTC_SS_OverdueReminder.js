@@ -13,26 +13,19 @@ define(['N/search', 'N/email', 'N/runtime', '../lib/OTC_Lib_Utils'],
   (search, email, runtime, utils) => {
 
     /**
-     * Gets script parameter with fallback to default
-     * @param {string} paramId - Parameter ID
-     * @param {*} defaultValue - Default value if param not set
-     * @returns {*} Parameter value or default
-     */
-    const getParam = (paramId, defaultValue) => {
-      const value = runtime.getCurrentScript().getParameter({ name: paramId });
-      return value ?? defaultValue;
-    };
-
-    /**
      * Gets script configuration from parameters
      * @returns {Object} Configuration object
      */
-    const getConfig = () => ({
-      governanceThreshold: getParam('custscript_otc_gov_threshold', utils.DEFAULTS.GOVERNANCE_THRESHOLD),
-      unitsPerEmail: getParam('custscript_otc_units_per_email', utils.DEFAULTS.UNITS_PER_EMAIL),
-      senderEmployee: getParam('custscript_otc_email_sender', runtime.getCurrentUser().id),
-      batchSize: getParam('custscript_otc_batch_size', 500)
-    });
+    const getConfig = () => {
+      const script = runtime.getCurrentScript();
+      const getParamFn = (opts) => script.getParameter(opts);
+      return {
+        governanceThreshold: utils.getScriptParam(getParamFn, 'custscript_otc_gov_threshold', utils.DEFAULTS.GOVERNANCE_THRESHOLD, true),
+        unitsPerEmail: utils.getScriptParam(getParamFn, 'custscript_otc_units_per_email', utils.DEFAULTS.UNITS_PER_EMAIL, true),
+        senderEmployee: utils.getScriptParam(getParamFn, 'custscript_otc_email_sender', runtime.getCurrentUser().id, true),
+        batchSize: utils.getScriptParam(getParamFn, 'custscript_otc_batch_size', 500, true)
+      };
+    };
 
     /**
      * Main execution entry point
