@@ -16,6 +16,11 @@
     "validate": "echo 'SuiteCloud CLI validation requires NetSuite account authentication. See README for deployment instructions.'"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@oracle/suitecloud-unit-testing": "^1.9.1",
+    "babel-jest": "^30.5.2",
+    "babel-plugin-transform-amd-to-commonjs": "^1.6.0",
     "eslint": "^8.57.0",
     "jest": "^29.7.0"
   },

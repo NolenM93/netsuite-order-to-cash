@@ -1,24 +1,20 @@
 /**
  * Jest Test Setup
  * Configures SuiteScript module mocks for unit testing
+ *
+ * The @oracle/suitecloud-unit-testing package provides stubs for N/ modules,
+ * but we need to configure jest.mock for modules we want to control in tests.
  */
 
-// Mock the SuiteScript module loader
-global.define = function(deps, factory) {
-  if (typeof deps === 'function') {
-    factory = deps;
-    deps = [];
-  }
-  // Store the factory for testing
-  if (factory) {
-    module.exports = factory;
-  }
-};
-
-// Base mock for N/log module
+// Global log mock (available in all SuiteScript contexts)
 global.log = {
   debug: jest.fn(),
   audit: jest.fn(),
   error: jest.fn(),
   emergency: jest.fn()
 };
+
+// Reset all mocks between tests
+beforeEach(() => {
+  jest.clearAllMocks();
+});
