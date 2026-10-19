@@ -9,8 +9,8 @@
  *
  * @author Nolen Millington
  */
-define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
-  function(search, record, runtime, utils) {
+define(['N/search', 'N/record', '../lib/OTC_Lib_Utils'],
+  (search, record, utils) => {
 
     /**
      * Custom record type ID for AR aging summary
@@ -20,14 +20,11 @@ define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
 
     /**
      * Defines the input data for the map phase
-     * Returns a search of open invoices grouped by customer
-     * @returns {Object} Search object
+     * Returns the search object directly for optimal governance
+     * @returns {search.Search} Search object
      */
-    function getInputData() {
-      log.audit({
-        title: 'AR Aging Summary - getInputData',
-        details: 'Starting data collection'
-      });
+    const getInputData = () => {
+      log.audit({ title: 'AR Aging Summary - getInputData', details: 'Starting data collection' });
 
       return search.create({
         type: search.Type.INVOICE,
@@ -39,80 +36,70 @@ define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
           ['amountremaining', 'greaterthan', 0]
         ],
         columns: [
-          search.createColumn({ name: 'internalid', join: 'customer', summary: 'GROUP' }),
-          search.createColumn({ name: 'companyname', join: 'customer', summary: 'GROUP' }),
+          search.createColumn({ name: 'internalid', join: 'customer' }),
+          search.createColumn({ name: 'companyname', join: 'customer' }),
           search.createColumn({ name: 'duedate' }),
           search.createColumn({ name: 'amountremaining' }),
           search.createColumn({ name: 'tranid' }),
           search.createColumn({ name: 'internalid' })
         ]
       });
-    }
+    };
 
     /**
      * Maps invoice data to customer key with aging calculations
      * @param {Object} context - Map context
-     * @param {string} context.key - Search result key
-     * @param {string} context.value - Search result value (JSON)
      */
-    function map(context) {
+    const map = (context) => {
       try {
         const searchResult = JSON.parse(context.value);
         const values = searchResult.values;
 
-        const customerIdObj = values['GROUP(internalid.customer)'];
-        const customerId = customerIdObj ? customerIdObj.value : null;
+        const customerIdObj = values['internalid.customer'];
+        const customerId = customerIdObj?.value ?? null;
 
         if (!customerId) {
           return;
         }
 
-        const customerNameObj = values['GROUP(companyname.customer)'];
+        const customerNameObj = values['companyname.customer'];
         const customerName = customerNameObj || 'Unknown Customer';
 
         const dueDate = values.duedate;
         const amountRemaining = parseFloat(values.amountremaining) || 0;
-        const invoiceId = values.internalid ? values.internalid.value : null;
+        const invoiceId = values.internalid?.value ?? null;
         const tranId = values.tranid;
 
         const daysOverdue = utils.calculateDaysOverdue(new Date(dueDate));
         const agingBucket = utils.getAgingBucket(daysOverdue);
 
-        const invoiceData = {
-          invoiceId: invoiceId,
-          tranId: tranId,
-          dueDate: dueDate,
-          amountRemaining: amountRemaining,
-          daysOverdue: daysOverdue,
-          agingBucket: agingBucket,
-          customerName: customerName
-        };
-
         context.write({
           key: customerId,
-          value: JSON.stringify(invoiceData)
+          value: JSON.stringify({
+            invoiceId,
+            tranId,
+            dueDate,
+            amountRemaining,
+            daysOverdue,
+            agingBucket,
+            customerName
+          })
         });
-
       } catch (e) {
-        log.error({
-          title: 'Map Error',
-          details: 'Key: ' + context.key + ', Error: ' + e.message
-        });
+        log.error({ title: 'Map Error', details: `Key: ${context.key}, Error: ${e.message}` });
       }
-    }
+    };
 
     /**
      * Reduces invoice data by customer to create aging summary
      * @param {Object} context - Reduce context
-     * @param {string} context.key - Customer ID
-     * @param {Array<string>} context.values - Invoice data JSON strings
      */
-    function reduce(context) {
+    const reduce = (context) => {
       try {
         const customerId = context.key;
 
         const agingSummary = {
-          customerId: customerId,
+          customerId,
           customerName: '',
           current: 0,
           days1to30: 0,
@@ -138,22 +125,17 @@ define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
             agingSummary.oldestInvoiceDays = invoice.daysOverdue;
           }
 
-          switch (invoice.agingBucket) {
-            case 'Current':
-              agingSummary.current += invoice.amountRemaining;
-              break;
-            case '1-30 Days':
-              agingSummary.days1to30 += invoice.amountRemaining;
-              break;
-            case '31-60 Days':
-              agingSummary.days31to60 += invoice.amountRemaining;
-              break;
-            case '61-90 Days':
-              agingSummary.days61to90 += invoice.amountRemaining;
-              break;
-            case 'Over 90 Days':
-              agingSummary.over90 += invoice.amountRemaining;
-              break;
+          const bucketMap = {
+            'Current': 'current',
+            '1-30 Days': 'days1to30',
+            '31-60 Days': 'days31to60',
+            '61-90 Days': 'days61to90',
+            'Over 90 Days': 'over90'
+          };
+
+          const bucketKey = bucketMap[invoice.agingBucket];
+          if (bucketKey) {
+            agingSummary[bucketKey] += invoice.amountRemaining;
           }
         }
 
@@ -167,129 +149,72 @@ define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
             totalOutstanding: agingSummary.totalOutstanding
           })
         });
-
       } catch (e) {
-        log.error({
-          title: 'Reduce Error',
-          details: 'Customer: ' + context.key + ', Error: ' + e.message
-        });
+        log.error({ title: 'Reduce Error', details: `Customer: ${context.key}, Error: ${e.message}` });
 
         context.write({
           key: context.key,
-          value: JSON.stringify({
-            success: false,
-            error: e.message
-          })
+          value: JSON.stringify({ success: false, error: e.message })
         });
       }
-    }
+    };
 
     /**
      * Saves aging summary to custom record
      * @param {Object} summary - Aging summary data
      */
-    function saveAgingSummary(summary) {
+    const saveAgingSummary = (summary) => {
       const existingRecord = findExistingRecord(summary.customerId);
-      let agingRecord;
+      const agingRecord = existingRecord
+        ? record.load({ type: AGING_RECORD_TYPE, id: existingRecord })
+        : record.create({ type: AGING_RECORD_TYPE });
 
-      if (existingRecord) {
-        agingRecord = record.load({
-          type: AGING_RECORD_TYPE,
-          id: existingRecord
-        });
-      } else {
-        agingRecord = record.create({
-          type: AGING_RECORD_TYPE
-        });
-
-        agingRecord.setValue({
-          fieldId: 'custrecord_otc_aging_customer',
-          value: summary.customerId
-        });
+      if (!existingRecord) {
+        agingRecord.setValue({ fieldId: 'custrecord_otc_aging_customer', value: summary.customerId });
       }
 
-      agingRecord.setValue({
-        fieldId: 'name',
-        value: 'AR Aging - ' + summary.customerName.substring(0, 50)
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_current',
-        value: summary.current
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_1_30',
-        value: summary.days1to30
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_31_60',
-        value: summary.days31to60
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_61_90',
-        value: summary.days61to90
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_over_90',
-        value: summary.over90
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_total',
-        value: summary.totalOutstanding
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_invoice_count',
-        value: summary.invoiceCount
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_oldest_days',
-        value: summary.oldestInvoiceDays
-      });
-
-      agingRecord.setValue({
-        fieldId: 'custrecord_otc_aging_last_updated',
-        value: new Date()
-      });
+      const safeName = summary.customerName.substring(0, 50);
+      agingRecord.setValue({ fieldId: 'name', value: `AR Aging - ${safeName}` });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_current', value: summary.current });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_1_30', value: summary.days1to30 });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_31_60', value: summary.days31to60 });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_61_90', value: summary.days61to90 });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_over_90', value: summary.over90 });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_total', value: summary.totalOutstanding });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_invoice_count', value: summary.invoiceCount });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_oldest_days', value: summary.oldestInvoiceDays });
+      agingRecord.setValue({ fieldId: 'custrecord_otc_aging_last_updated', value: new Date() });
 
       agingRecord.save();
-    }
+    };
 
     /**
      * Finds existing aging record for a customer
      * @param {string} customerId - Customer internal ID
      * @returns {string|null} Record internal ID or null
      */
-    function findExistingRecord(customerId) {
+    const findExistingRecord = (customerId) => {
       const existingSearch = search.create({
         type: AGING_RECORD_TYPE,
-        filters: [
-          ['custrecord_otc_aging_customer', 'anyof', customerId]
-        ],
+        filters: [['custrecord_otc_aging_customer', 'anyof', customerId]],
         columns: ['internalid']
       });
 
       let existingId = null;
 
-      existingSearch.run().each(function(result) {
+      existingSearch.run().each((result) => {
         existingId = result.id;
         return false;
       });
 
       return existingId;
-    }
+    };
 
     /**
      * Summarizes script execution and reports errors
      * @param {Object} summary - Summary context
      */
-    function summarize(summary) {
+    const summarize = (summary) => {
       log.audit({
         title: 'AR Aging Summary - Summarize',
         details: JSON.stringify({
@@ -305,48 +230,33 @@ define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
       let errorCount = 0;
       const errors = [];
 
-      summary.output.iterator().each(function(key, value) {
+      summary.output.iterator().each((key, value) => {
         const result = JSON.parse(value);
         if (result.success) {
           successCount++;
         } else {
           errorCount++;
-          errors.push({
-            customerId: key,
-            error: result.error
-          });
+          errors.push({ customerId: key, error: result.error });
         }
         return true;
       });
 
       log.audit({
         title: 'Processing Results',
-        details: JSON.stringify({
-          successCount: successCount,
-          errorCount: errorCount
-        })
+        details: JSON.stringify({ successCount, errorCount })
       });
 
       if (summary.inputSummary.error) {
-        log.error({
-          title: 'Input Error',
-          details: summary.inputSummary.error
-        });
+        log.error({ title: 'Input Error', details: summary.inputSummary.error });
       }
 
-      summary.mapSummary.errors.iterator().each(function(key, error) {
-        log.error({
-          title: 'Map Error',
-          details: 'Key: ' + key + ', Error: ' + error
-        });
+      summary.mapSummary.errors.iterator().each((key, error) => {
+        log.error({ title: 'Map Error', details: `Key: ${key}, Error: ${error}` });
         return true;
       });
 
-      summary.reduceSummary.errors.iterator().each(function(key, error) {
-        log.error({
-          title: 'Reduce Error',
-          details: 'Key: ' + key + ', Error: ' + error
-        });
+      summary.reduceSummary.errors.iterator().each((key, error) => {
+        log.error({ title: 'Reduce Error', details: `Key: ${key}, Error: ${error}` });
         return true;
       });
 
@@ -356,13 +266,8 @@ define(['N/search', 'N/record', 'N/runtime', '../lib/OTC_Lib_Utils'],
           details: JSON.stringify(errors.slice(0, 10))
         });
       }
-    }
-
-    return {
-      getInputData: getInputData,
-      map: map,
-      reduce: reduce,
-      summarize: summarize
     };
+
+    return { getInputData, map, reduce, summarize };
 
   });
