@@ -1,5 +1,10 @@
 /**
  * Jest Configuration for SuiteScript 2.1 Unit Testing
+ *
+ * Note: Coverage instrumentation doesn't work with AMD modules loaded via eval().
+ * This is a known limitation when testing SuiteScript modules outside NetSuite.
+ * The tests do exercise the code paths, but coverage metrics show 0%.
+ * See README for details.
  */
 module.exports = {
   testEnvironment: 'node',
@@ -9,7 +14,7 @@ module.exports = {
     '!**/node_modules/**'
   ],
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'html'],
   moduleFileExtensions: ['js', 'json'],
   verbose: true,
   setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js']
