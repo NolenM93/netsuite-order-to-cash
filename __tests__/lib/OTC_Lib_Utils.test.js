@@ -317,6 +317,49 @@ describe('OTC_Lib_Utils', () => {
     });
   });
 
+  describe('getScriptParam', () => {
+    it('should return value when param is set', () => {
+      const getParamFn = jest.fn().mockReturnValue('test-value');
+      expect(utils.getScriptParam(getParamFn, 'param_id', 'default')).toBe('test-value');
+      expect(getParamFn).toHaveBeenCalledWith({ name: 'param_id' });
+    });
+
+    it('should return default when param is null', () => {
+      const getParamFn = jest.fn().mockReturnValue(null);
+      expect(utils.getScriptParam(getParamFn, 'param_id', 'default')).toBe('default');
+    });
+
+    it('should return default when param is undefined', () => {
+      const getParamFn = jest.fn().mockReturnValue(undefined);
+      expect(utils.getScriptParam(getParamFn, 'param_id', 'default')).toBe('default');
+    });
+
+    it('should return default when param is empty string (NetSuite behavior)', () => {
+      const getParamFn = jest.fn().mockReturnValue('');
+      expect(utils.getScriptParam(getParamFn, 'param_id', 'default')).toBe('default');
+    });
+
+    it('should coerce to number when isNumeric is true', () => {
+      const getParamFn = jest.fn().mockReturnValue('42');
+      expect(utils.getScriptParam(getParamFn, 'param_id', 0, true)).toBe(42);
+    });
+
+    it('should return numeric default when param is empty and isNumeric', () => {
+      const getParamFn = jest.fn().mockReturnValue('');
+      expect(utils.getScriptParam(getParamFn, 'param_id', 100, true)).toBe(100);
+    });
+
+    it('should handle zero as valid value', () => {
+      const getParamFn = jest.fn().mockReturnValue(0);
+      expect(utils.getScriptParam(getParamFn, 'param_id', 999)).toBe(0);
+    });
+
+    it('should handle false as valid value', () => {
+      const getParamFn = jest.fn().mockReturnValue(false);
+      expect(utils.getScriptParam(getParamFn, 'param_id', true)).toBe(false);
+    });
+  });
+
   describe('DEFAULTS', () => {
     it('should export default configuration values', () => {
       expect(utils.DEFAULTS.LARGE_ORDER_THRESHOLD).toBe(10000);
