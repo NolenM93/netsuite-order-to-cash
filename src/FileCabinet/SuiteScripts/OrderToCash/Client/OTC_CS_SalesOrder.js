@@ -11,18 +11,15 @@
  *
  * @author Nolen Millington
  */
-define(['N/currentRecord', 'N/dialog', 'N/runtime', '../lib/OTC_Lib_Utils'],
-  function(currentRecord, dialog, runtime, utils) {
+define(['N/currentRecord', 'N/dialog', '../lib/OTC_Lib_Utils'],
+  (currentRecord, dialog, utils) => {
 
     /**
      * Sets default field values when page loads
      * @param {Object} context - Entry point context
-     * @param {Record} context.currentRecord - Current record
-     * @param {string} context.mode - Page mode (create/edit/view)
      */
-    function pageInit(context) {
-      const rec = context.currentRecord;
-      const mode = context.mode;
+    const pageInit = (context) => {
+      const { currentRecord: rec, mode } = context;
 
       if (mode !== 'create') {
         return;
@@ -31,31 +28,18 @@ define(['N/currentRecord', 'N/dialog', 'N/runtime', '../lib/OTC_Lib_Utils'],
       try {
         setDefaultDate(rec);
         setDefaultMemo(rec);
-
-        log.debug({
-          title: 'pageInit',
-          details: 'Default values set for new sales order'
-        });
+        log.debug({ title: 'pageInit', details: 'Default values set for new sales order' });
       } catch (e) {
-        log.error({
-          title: 'pageInit Error',
-          details: e.message
-        });
+        log.error({ title: 'pageInit Error', details: e.message });
       }
-    }
+    };
 
     /**
      * Handles field changes - auto-calculates discount based on quantity
      * @param {Object} context - Entry point context
-     * @param {Record} context.currentRecord - Current record
-     * @param {string} context.fieldId - Changed field ID
-     * @param {string} context.sublistId - Sublist ID if applicable
-     * @param {number} context.line - Line number if applicable
      */
-    function fieldChanged(context) {
-      const rec = context.currentRecord;
-      const fieldId = context.fieldId;
-      const sublistId = context.sublistId;
+    const fieldChanged = (context) => {
+      const { currentRecord: rec, fieldId, sublistId } = context;
 
       if (sublistId === 'item' && fieldId === 'quantity') {
         handleQuantityChange(rec);
@@ -64,32 +48,23 @@ define(['N/currentRecord', 'N/dialog', 'N/runtime', '../lib/OTC_Lib_Utils'],
       if (fieldId === 'entity') {
         handleCustomerChange(rec);
       }
-    }
+    };
 
     /**
      * Validates line item before it's committed
      * @param {Object} context - Entry point context
-     * @param {Record} context.currentRecord - Current record
-     * @param {string} context.sublistId - Sublist ID
      * @returns {boolean} True if line is valid
      */
-    function validateLine(context) {
-      const rec = context.currentRecord;
-      const sublistId = context.sublistId;
+    const validateLine = (context) => {
+      const { currentRecord: rec, sublistId } = context;
 
       if (sublistId !== 'item') {
         return true;
       }
 
-      const item = rec.getCurrentSublistValue({
-        sublistId: 'item',
-        fieldId: 'item'
-      });
-
-      const quantity = rec.getCurrentSublistValue({
-        sublistId: 'item',
-        fieldId: 'quantity'
-      });
+      const item = rec.getCurrentSublistValue({ sublistId: 'item', fieldId: 'item' });
+      const quantity = rec.getCurrentSublistValue({ sublistId: 'item', fieldId: 'quantity' });
+      const rate = rec.getCurrentSublistValue({ sublistId: 'item', fieldId: 'rate' });
 
       if (!item) {
         showValidationMessage('Please select an item.');
@@ -101,27 +76,21 @@ define(['N/currentRecord', 'N/dialog', 'N/runtime', '../lib/OTC_Lib_Utils'],
         return false;
       }
 
-      const rate = rec.getCurrentSublistValue({
-        sublistId: 'item',
-        fieldId: 'rate'
-      });
-
-      if (!rate || parseFloat(rate) < 0) {
+      if (rate === null || rate === '' || parseFloat(rate) < 0) {
         showValidationMessage('Please enter a valid rate.');
         return false;
       }
 
       return true;
-    }
+    };
 
     /**
      * Final validation before saving the record
      * @param {Object} context - Entry point context
-     * @param {Record} context.currentRecord - Current record
      * @returns {boolean} True if record can be saved
      */
-    function saveRecord(context) {
-      const rec = context.currentRecord;
+    const saveRecord = (context) => {
+      const { currentRecord: rec } = context;
 
       const customer = rec.getValue({ fieldId: 'entity' });
       if (!customer) {
@@ -151,16 +120,14 @@ define(['N/currentRecord', 'N/dialog', 'N/runtime', '../lib/OTC_Lib_Utils'],
 
       if (daysDiff > 30) {
         showValidationMessage(
-          'Order date is more than 30 days in the past. ' +
-          'Please verify this is correct or update the date.'
+          'Order date is more than 30 days in the past. Please verify this is correct or update the date.'
         );
         return false;
       }
 
       if (daysDiff < -365) {
         showValidationMessage(
-          'Order date is more than a year in the future. ' +
-          'Please verify this is correct or update the date.'
+          'Order date is more than a year in the future. Please verify this is correct or update the date.'
         );
         return false;
       }
@@ -172,96 +139,66 @@ define(['N/currentRecord', 'N/dialog', 'N/runtime', '../lib/OTC_Lib_Utils'],
       }
 
       return true;
-    }
+    };
 
     /**
      * Sets default transaction date to today
      * @param {Record} rec - Current record
      */
-    function setDefaultDate(rec) {
+    const setDefaultDate = (rec) => {
       const currentDate = rec.getValue({ fieldId: 'trandate' });
       if (!currentDate) {
-        rec.setValue({
-          fieldId: 'trandate',
-          value: new Date()
-        });
+        rec.setValue({ fieldId: 'trandate', value: new Date() });
       }
-    }
+    };
 
     /**
      * Sets default memo field
      * @param {Record} rec - Current record
      */
-    function setDefaultMemo(rec) {
+    const setDefaultMemo = (rec) => {
       const currentMemo = rec.getValue({ fieldId: 'memo' });
       if (!currentMemo) {
-        rec.setValue({
-          fieldId: 'memo',
-          value: 'Order created via Order-to-Cash Toolkit'
-        });
+        rec.setValue({ fieldId: 'memo', value: 'Order created via Order-to-Cash Toolkit' });
       }
-    }
+    };
 
     /**
      * Handles quantity change - auto-calculates discount tier
      * @param {Record} rec - Current record
      */
-    function handleQuantityChange(rec) {
-      const quantity = rec.getCurrentSublistValue({
-        sublistId: 'item',
-        fieldId: 'quantity'
-      });
-
+    const handleQuantityChange = (rec) => {
+      const quantity = rec.getCurrentSublistValue({ sublistId: 'item', fieldId: 'quantity' });
       const discountRate = utils.getDiscountTier(quantity);
 
       if (discountRate > 0) {
-        const baseRate = rec.getCurrentSublistValue({
-          sublistId: 'item',
-          fieldId: 'rate'
-        });
-
+        const baseRate = rec.getCurrentSublistValue({ sublistId: 'item', fieldId: 'rate' });
         if (baseRate) {
           const discountPct = (discountRate * 100).toFixed(0);
-
-          log.debug({
-            title: 'Discount Applied',
-            details: 'Quantity: ' + quantity + ', Discount: ' + discountPct + '%'
-          });
+          log.debug({ title: 'Discount Applied', details: `Quantity: ${quantity}, Discount: ${discountPct}%` });
         }
       }
-    }
+    };
 
     /**
      * Handles customer change - could load customer preferences
      * @param {Record} rec - Current record
      */
-    function handleCustomerChange(rec) {
+    const handleCustomerChange = (rec) => {
       const customerId = rec.getValue({ fieldId: 'entity' });
-
       if (customerId) {
-        log.debug({
-          title: 'Customer Selected',
-          details: 'Customer ID: ' + customerId
-        });
+        log.debug({ title: 'Customer Selected', details: `Customer ID: ${customerId}` });
       }
-    }
+    };
 
     /**
      * Shows a user-friendly validation message
      * @param {string} message - Message to display
      */
-    function showValidationMessage(message) {
-      dialog.alert({
-        title: 'Validation Required',
-        message: message
-      });
-    }
-
-    return {
-      pageInit: pageInit,
-      fieldChanged: fieldChanged,
-      validateLine: validateLine,
-      saveRecord: saveRecord
+    const showValidationMessage = (message) => {
+      dialog.alert({ title: 'Validation Required', message });
     };
+
+    return { pageInit, fieldChanged, validateLine, saveRecord };
 
   });
