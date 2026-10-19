@@ -10,69 +10,65 @@
  * @author Nolen Millington
  */
 define(['N/record', 'N/search', 'N/error', '../lib/OTC_Lib_Utils'],
-  function(record, search, error, utils) {
+  (record, search, error, utils) => {
 
     /**
      * Handles GET requests - order status lookup
      * @param {Object} requestParams - Request parameters
-     * @param {string} [requestParams.orderId] - Internal order ID
-     * @param {string} [requestParams.orderNumber] - Order document number
      * @returns {Object} Order status response
      */
-    function get(requestParams) {
+    const get = (requestParams) => {
       try {
-        if (!requestParams.orderId && !requestParams.orderNumber) {
+        const { orderId, orderNumber } = requestParams;
+
+        if (!orderId && !orderNumber) {
           return utils.buildErrorResponse(
-            'MISSING_PARAMETER',
+            'OTC_MISSING_PARAMETER',
             'Either orderId or orderNumber is required',
             400
           );
         }
 
-        let orderId = requestParams.orderId;
+        let resolvedOrderId = orderId;
 
-        if (!orderId && requestParams.orderNumber) {
-          orderId = lookupOrderByNumber(requestParams.orderNumber);
+        if (!resolvedOrderId && orderNumber) {
+          resolvedOrderId = lookupOrderByNumber(orderNumber);
 
-          if (!orderId) {
+          if (!resolvedOrderId) {
             return utils.buildErrorResponse(
-              'NOT_FOUND',
-              'Order not found: ' + requestParams.orderNumber,
+              'OTC_NOT_FOUND',
+              `Order not found: ${orderNumber}`,
               404
             );
           }
         }
 
-        const orderData = getOrderStatus(orderId);
-
+        const orderData = getOrderStatus(resolvedOrderId);
         return utils.buildSuccessResponse(orderData, 'Order retrieved successfully');
 
       } catch (e) {
-        log.error({
-          title: 'GET Error',
-          details: e.message
-        });
+        log.error({ title: 'OTC_RL_OrderAPI.get', details: e.message });
 
         return utils.buildErrorResponse(
-          'INTERNAL_ERROR',
-          'An error occurred retrieving the order: ' + e.message,
+          'OTC_INTERNAL_ERROR',
+          `An error occurred retrieving the order: ${e.message}`,
           500
         );
       }
-    }
+    };
 
     /**
      * Handles POST requests - lead creation
      * @param {Object} requestBody - Request body
      * @returns {Object} Created lead response
      */
-    function post(requestBody) {
+    const post = (requestBody) => {
       try {
         const validationResult = validateLeadInput(requestBody);
 
         if (!validationResult.valid) {
           return utils.buildErrorResponse(
-            'VALIDATION_ERROR',
+            'OTC_VALIDATION_ERROR',
             validationResult.message,
             400
           );
@@ -81,38 +77,35 @@ define(['N/record', 'N/search', 'N/error', '../lib/OTC_Lib_Utils'],
         const leadId = createLead(requestBody);
 
         return utils.buildSuccessResponse(
-          { leadId: leadId },
+          { leadId },
           'Lead created successfully'
         );
 
       } catch (e) {
-        log.error({
-          title: 'POST Error',
-          details: e.message
-        });
+        log.error({ title: 'OTC_RL_OrderAPI.post', details: e.message });
 
-        if (e.name === 'DUPLICATE_LEAD') {
+        if (e.name === 'OTC_DUPLICATE_LEAD') {
           return utils.buildErrorResponse(
-            'DUPLICATE_LEAD',
+            'OTC_DUPLICATE_LEAD',
             'A lead with this email already exists',
             409
           );
         }
 
         return utils.buildErrorResponse(
-          'INTERNAL_ERROR',
-          'An error occurred creating the lead: ' + e.message,
+          'OTC_INTERNAL_ERROR',
+          `An error occurred creating the lead: ${e.message}`,
           500
         );
       }
-    }
+    };
 
     /**
      * Looks up order ID by document number
      * @param {string} orderNumber - Order document number (tranid)
      * @returns {string|null} Internal order ID or null
      */
-    function lookupOrderByNumber(orderNumber) {
+    const lookupOrderByNumber = (orderNumber) => {
       const orderSearch = search.create({
         type: search.Type.SALES_ORDER,
         filters: [
@@ -125,84 +118,70 @@ define(['N/record', 'N/search', 'N/error', '../lib/OTC_Lib_Utils'],
 
       let orderId = null;
 
-      orderSearch.run().each(function(result) {
+      orderSearch.run().each((result) => {
         orderId = result.id;
         return false;
       });
 
       return orderId;
-    }
+    };
 
     /**
      * Gets order status details
      * @param {string} orderId - Internal order ID
      * @returns {Object} Order status data
      */
-    function getOrderStatus(orderId) {
+    const getOrderStatus = (orderId) => {
       const orderRecord = record.load({
         type: record.Type.SALES_ORDER,
         id: orderId
       });
 
-      const status = orderRecord.getValue({ fieldId: 'status' });
-      const statusText = orderRecord.getText({ fieldId: 'status' });
-      const tranId = orderRecord.getValue({ fieldId: 'tranid' });
-      const tranDate = orderRecord.getValue({ fieldId: 'trandate' });
-      const total = orderRecord.getValue({ fieldId: 'total' });
-      const shipDate = orderRecord.getValue({ fieldId: 'shipdate' });
-      const trackingNumbers = orderRecord.getValue({ fieldId: 'linkedtrackingnumbers' });
+      const getValue = (fieldId) => orderRecord.getValue({ fieldId });
+      const getText = (fieldId) => orderRecord.getText({ fieldId });
 
-      const customerName = orderRecord.getText({ fieldId: 'entity' });
+      const status = getValue('status');
+      const statusText = getText('status');
+      const tranId = getValue('tranid');
+      const tranDate = getValue('trandate');
+      const total = getValue('total');
+      const shipDate = getValue('shipdate');
+      const trackingNumbers = getValue('linkedtrackingnumbers');
+      const customerName = getText('entity');
 
       const lineCount = orderRecord.getLineCount({ sublistId: 'item' });
       const items = [];
 
       for (let i = 0; i < lineCount; i++) {
         items.push({
-          item: orderRecord.getSublistText({
-            sublistId: 'item',
-            fieldId: 'item',
-            line: i
-          }),
-          quantity: orderRecord.getSublistValue({
-            sublistId: 'item',
-            fieldId: 'quantity',
-            line: i
-          }),
-          rate: orderRecord.getSublistValue({
-            sublistId: 'item',
-            fieldId: 'rate',
-            line: i
-          }),
-          amount: orderRecord.getSublistValue({
-            sublistId: 'item',
-            fieldId: 'amount',
-            line: i
-          })
+          item: orderRecord.getSublistText({ sublistId: 'item', fieldId: 'item', line: i }),
+          quantity: orderRecord.getSublistValue({ sublistId: 'item', fieldId: 'quantity', line: i }),
+          rate: orderRecord.getSublistValue({ sublistId: 'item', fieldId: 'rate', line: i }),
+          amount: orderRecord.getSublistValue({ sublistId: 'item', fieldId: 'amount', line: i })
         });
       }
 
       return {
-        orderId: orderId,
+        orderId,
         orderNumber: tranId,
-        status: status,
+        status,
         statusDisplay: statusText,
         orderDate: tranDate ? tranDate.toISOString() : null,
         customer: customerName,
         total: parseFloat(total) || 0,
         shipDate: shipDate ? shipDate.toISOString() : null,
         trackingNumbers: trackingNumbers || null,
-        lineCount: lineCount,
-        items: items
+        lineCount,
+        items
       };
-    }
+    };
 
     /**
      * Validates lead input data
      * @param {Object} data - Lead input data
      * @returns {Object} Validation result
      */
-    function validateLeadInput(data) {
+    const validateLeadInput = (data) => {
       const errors = [];
 
       if (!data) {
@@ -238,14 +217,14 @@ define(['N/record', 'N/search', 'N/error', '../lib/OTC_Lib_Utils'],
       }
 
       return { valid: true };
-    }
+    };
 
     /**
      * Creates a lead record from form submission
      * @param {Object} data - Lead data
      * @returns {string} Created lead internal ID
      */
-    function createLead(data) {
+    const createLead = (data) => {
       checkForDuplicate(data.email);
 
       const lead = record.create({
@@ -253,68 +232,41 @@ define(['N/record', 'N/search', 'N/error', '../lib/OTC_Lib_Utils'],
         isDynamic: true
       });
 
-      lead.setValue({
-        fieldId: 'companyname',
-        value: utils.sanitizeInput(data.companyName, 100)
-      });
-
-      lead.setValue({
-        fieldId: 'firstname',
-        value: utils.sanitizeInput(data.firstName, 50)
-      });
-
-      lead.setValue({
-        fieldId: 'lastname',
-        value: utils.sanitizeInput(data.lastName, 50)
-      });
-
-      lead.setValue({
-        fieldId: 'email',
-        value: utils.sanitizeInput(data.email, 100)
-      });
+      lead.setValue({ fieldId: 'companyname', value: utils.sanitizeInput(data.companyName, 100) });
+      lead.setValue({ fieldId: 'firstname', value: utils.sanitizeInput(data.firstName, 50) });
+      lead.setValue({ fieldId: 'lastname', value: utils.sanitizeInput(data.lastName, 50) });
+      lead.setValue({ fieldId: 'email', value: utils.sanitizeInput(data.email, 100) });
 
       if (data.phone) {
-        lead.setValue({
-          fieldId: 'phone',
-          value: utils.sanitizeInput(data.phone, 25)
-        });
+        lead.setValue({ fieldId: 'phone', value: utils.sanitizeInput(data.phone, 25) });
       }
 
       if (data.comments) {
-        lead.setValue({
-          fieldId: 'comments',
-          value: utils.sanitizeInput(data.comments, 1000)
-        });
+        lead.setValue({ fieldId: 'comments', value: utils.sanitizeInput(data.comments, 1000) });
       }
 
       if (data.leadSource) {
-        lead.setValue({
-          fieldId: 'leadsource',
-          value: data.leadSource
-        });
+        lead.setValue({ fieldId: 'leadsource', value: data.leadSource });
       }
 
-      lead.setValue({
-        fieldId: 'custentity_otc_web_lead',
-        value: true
-      });
+      lead.setValue({ fieldId: 'custentity_otc_web_lead', value: true });
 
       const leadId = lead.save();
 
       log.audit({
         title: 'Lead Created',
-        details: 'Lead ID: ' + leadId + ', Company: ' + data.companyName
+        details: `Lead ID: ${leadId}, Company: ${data.companyName}`
       });
 
       return leadId;
-    }
+    };
 
     /**
      * Checks for duplicate lead by email
      * @param {string} email - Email to check
-     * @throws {Error} If duplicate exists
+     * @throws {error.SuiteScriptError} If duplicate exists
      */
-    function checkForDuplicate(email) {
+    const checkForDuplicate = (email) => {
       const duplicateSearch = search.create({
         type: search.Type.CUSTOMER,
         filters: [
@@ -327,23 +279,20 @@ define(['N/record', 'N/search', 'N/error', '../lib/OTC_Lib_Utils'],
 
       let exists = false;
 
-      duplicateSearch.run().each(function() {
+      duplicateSearch.run().each(() => {
         exists = true;
         return false;
       });
 
       if (exists) {
-        const err = error.create({
-          name: 'DUPLICATE_LEAD',
-          message: 'A lead with this email already exists'
+        throw error.create({
+          name: 'OTC_DUPLICATE_LEAD',
+          message: 'A lead with this email already exists',
+          notifyOff: true
         });
-        throw err;
       }
-    }
-
-    return {
-      get: get,
-      post: post
     };
+
+    return { get, post };
 
   });
