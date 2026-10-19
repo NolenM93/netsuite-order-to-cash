@@ -10,37 +10,35 @@
  * @author Nolen Millington
  */
 define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/runtime', '../lib/OTC_Lib_Utils'],
-  function(serverWidget, search, url, redirect, task, runtime, utils) {
+  (serverWidget, search, url, redirect, task, runtime, utils) => {
 
     /**
      * Main entry point for Suitelet
      * @param {Object} context - Entry point context
-     * @param {ServerRequest} context.request - Request object
-     * @param {ServerResponse} context.response - Response object
      */
-    function onRequest(context) {
+    const onRequest = (context) => {
       if (context.request.method === 'GET') {
         handleGet(context);
       } else {
         handlePost(context);
       }
-    }
+    };
 
     /**
      * Handles GET requests - displays the dashboard
      * @param {Object} context - Entry point context
      */
-    function handleGet(context) {
+    const handleGet = (context) => {
       const form = createDashboardForm(context.request.parameters);
       context.response.writePage(form);
-    }
+    };
 
     /**
      * Handles POST requests - triggers reminder script
      * @param {Object} context - Entry point context
      */
-    function handlePost(context) {
-      const action = context.request.parameters.custpage_action;
+    const handlePost = (context) => {
+      const { custpage_action: action } = context.request.parameters;
 
       if (action === 'send_reminders') {
         triggerReminderScript();
@@ -48,24 +46,20 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
         redirect.toSuitelet({
           scriptId: runtime.getCurrentScript().id,
           deploymentId: runtime.getCurrentScript().deploymentId,
-          parameters: {
-            message: 'Reminder emails have been scheduled to send.'
-          }
+          parameters: { message: 'Reminder emails have been scheduled to send.' }
         });
       } else {
         handleGet(context);
       }
-    }
+    };
 
     /**
      * Creates the dashboard form with filters and results
      * @param {Object} params - Request parameters for filtering
      * @returns {Form} Server widget form
      */
-    function createDashboardForm(params) {
-      const form = serverWidget.createForm({
-        title: 'Collections Dashboard'
-      });
+    const createDashboardForm = (params) => {
+      const form = serverWidget.createForm({ title: 'Collections Dashboard' });
 
       if (params.message) {
         form.addPageInitMessage({
@@ -80,18 +74,15 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
       addSummaryFields(form, params);
 
       return form;
-    }
+    };
 
     /**
      * Adds filter fields to the form
      * @param {Form} form - Server widget form
      * @param {Object} params - Current filter values
      */
-    function addFilterFields(form, params) {
-      form.addFieldGroup({
-        id: 'custpage_filters',
-        label: 'Filters'
-      });
+    const addFilterFields = (form, params) => {
+      form.addFieldGroup({ id: 'custpage_filters', label: 'Filters' });
 
       const customerField = form.addField({
         id: 'custpage_customer',
@@ -134,16 +125,14 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
         minAmountField.defaultValue = params.custpage_min_amount;
       }
 
-      form.addSubmitButton({
-        label: 'Apply Filters'
-      });
-    }
+      form.addSubmitButton({ label: 'Apply Filters' });
+    };
 
     /**
      * Adds action buttons to the form
      * @param {Form} form - Server widget form
      */
-    function addActionButtons(form) {
+    const addActionButtons = (form) => {
       form.addButton({
         id: 'custpage_send_reminders',
         label: 'Send Reminder Emails',
@@ -157,17 +146,15 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
         type: serverWidget.FieldType.TEXT,
         label: 'Action'
       });
-      actionField.updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.HIDDEN
-      });
-    }
+      actionField.updateDisplayType({ displayType: serverWidget.FieldDisplayType.HIDDEN });
+    };
 
     /**
      * Adds the overdue invoices sublist
      * @param {Form} form - Server widget form
      * @param {Object} params - Filter parameters
      */
-    function addOverdueInvoiceSublist(form, params) {
+    const addOverdueInvoiceSublist = (form, params) => {
       const sublist = form.addSublist({
         id: 'custpage_invoices',
         type: serverWidget.SublistType.LIST,
@@ -180,132 +167,52 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
         label: 'View'
       }).linkText = 'View';
 
-      sublist.addField({
-        id: 'custpage_inv_number',
-        type: serverWidget.FieldType.TEXT,
-        label: 'Invoice #'
-      });
-
-      sublist.addField({
-        id: 'custpage_inv_customer',
-        type: serverWidget.FieldType.TEXT,
-        label: 'Customer'
-      });
-
-      sublist.addField({
-        id: 'custpage_inv_due_date',
-        type: serverWidget.FieldType.DATE,
-        label: 'Due Date'
-      });
-
-      sublist.addField({
-        id: 'custpage_inv_days_overdue',
-        type: serverWidget.FieldType.INTEGER,
-        label: 'Days Overdue'
-      });
-
-      sublist.addField({
-        id: 'custpage_inv_aging',
-        type: serverWidget.FieldType.TEXT,
-        label: 'Aging Bucket'
-      });
-
-      sublist.addField({
-        id: 'custpage_inv_amount',
-        type: serverWidget.FieldType.CURRENCY,
-        label: 'Amount Due'
-      });
-
-      sublist.addField({
-        id: 'custpage_inv_email',
-        type: serverWidget.FieldType.TEXT,
-        label: 'Customer Email'
-      });
+      sublist.addField({ id: 'custpage_inv_number', type: serverWidget.FieldType.TEXT, label: 'Invoice #' });
+      sublist.addField({ id: 'custpage_inv_customer', type: serverWidget.FieldType.TEXT, label: 'Customer' });
+      sublist.addField({ id: 'custpage_inv_due_date', type: serverWidget.FieldType.DATE, label: 'Due Date' });
+      sublist.addField({ id: 'custpage_inv_days_overdue', type: serverWidget.FieldType.INTEGER, label: 'Days Overdue' });
+      sublist.addField({ id: 'custpage_inv_aging', type: serverWidget.FieldType.TEXT, label: 'Aging Bucket' });
+      sublist.addField({ id: 'custpage_inv_amount', type: serverWidget.FieldType.CURRENCY, label: 'Amount Due' });
+      sublist.addField({ id: 'custpage_inv_email', type: serverWidget.FieldType.TEXT, label: 'Customer Email' });
 
       populateSublist(sublist, params);
-    }
+    };
 
     /**
      * Populates the sublist with search results
      * @param {Sublist} sublist - Sublist to populate
      * @param {Object} params - Filter parameters
      */
-    function populateSublist(sublist, params) {
+    const populateSublist = (sublist, params) => {
       const invoices = searchOverdueInvoices(params);
 
-      for (let i = 0; i < invoices.length; i++) {
-        const inv = invoices[i];
-
+      invoices.forEach((inv, i) => {
         sublist.setSublistValue({
           id: 'custpage_inv_view',
           line: i,
-          value: url.resolveRecord({
-            recordType: 'invoice',
-            recordId: inv.id
-          })
+          value: url.resolveRecord({ recordType: 'invoice', recordId: inv.id })
         });
 
-        sublist.setSublistValue({
-          id: 'custpage_inv_number',
-          line: i,
-          value: inv.tranId
-        });
-
-        sublist.setSublistValue({
-          id: 'custpage_inv_customer',
-          line: i,
-          value: inv.customerName
-        });
-
-        sublist.setSublistValue({
-          id: 'custpage_inv_due_date',
-          line: i,
-          value: inv.dueDate
-        });
-
-        sublist.setSublistValue({
-          id: 'custpage_inv_days_overdue',
-          line: i,
-          value: inv.daysOverdue.toString()
-        });
-
-        sublist.setSublistValue({
-          id: 'custpage_inv_aging',
-          line: i,
-          value: inv.agingBucket
-        });
-
-        sublist.setSublistValue({
-          id: 'custpage_inv_amount',
-          line: i,
-          value: inv.amountRemaining.toString()
-        });
-
-        sublist.setSublistValue({
-          id: 'custpage_inv_email',
-          line: i,
-          value: inv.customerEmail || '(none)'
-        });
-      }
-    }
+        sublist.setSublistValue({ id: 'custpage_inv_number', line: i, value: utils.escapeHtml(inv.tranId) });
+        sublist.setSublistValue({ id: 'custpage_inv_customer', line: i, value: utils.escapeHtml(inv.customerName) });
+        sublist.setSublistValue({ id: 'custpage_inv_due_date', line: i, value: inv.dueDate });
+        sublist.setSublistValue({ id: 'custpage_inv_days_overdue', line: i, value: String(inv.daysOverdue) });
+        sublist.setSublistValue({ id: 'custpage_inv_aging', line: i, value: inv.agingBucket });
+        sublist.setSublistValue({ id: 'custpage_inv_amount', line: i, value: String(inv.amountRemaining) });
+        sublist.setSublistValue({ id: 'custpage_inv_email', line: i, value: inv.customerEmail || '(none)' });
+      });
+    };
 
     /**
      * Adds summary statistics fields
      * @param {Form} form - Server widget form
      * @param {Object} params - Filter parameters
      */
-    function addSummaryFields(form, params) {
-      form.addFieldGroup({
-        id: 'custpage_summary',
-        label: 'Summary'
-      });
+    const addSummaryFields = (form, params) => {
+      form.addFieldGroup({ id: 'custpage_summary', label: 'Summary' });
 
       const invoices = searchOverdueInvoices(params);
-      let totalAmount = 0;
-
-      for (const inv of invoices) {
-        totalAmount += inv.amountRemaining;
-      }
+      const totalAmount = invoices.reduce((sum, inv) => sum + inv.amountRemaining, 0);
 
       const countField = form.addField({
         id: 'custpage_total_count',
@@ -313,10 +220,8 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
         label: 'Total Overdue Invoices',
         container: 'custpage_summary'
       });
-      countField.defaultValue = invoices.length.toString();
-      countField.updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE
-      });
+      countField.defaultValue = String(invoices.length);
+      countField.updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
 
       const amountField = form.addField({
         id: 'custpage_total_amount',
@@ -324,18 +229,16 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
         label: 'Total Amount Overdue',
         container: 'custpage_summary'
       });
-      amountField.defaultValue = totalAmount.toString();
-      amountField.updateDisplayType({
-        displayType: serverWidget.FieldDisplayType.INLINE
-      });
-    }
+      amountField.defaultValue = String(totalAmount);
+      amountField.updateDisplayType({ displayType: serverWidget.FieldDisplayType.INLINE });
+    };
 
     /**
      * Searches for overdue invoices with optional filters
      * @param {Object} params - Filter parameters
      * @returns {Array<Object>} Array of invoice data
      */
-    function searchOverdueInvoices(params) {
+    const searchOverdueInvoices = (params) => {
       const filters = [
         ['mainline', 'is', 'T'],
         'AND',
@@ -347,18 +250,16 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
       ];
 
       if (params.custpage_customer) {
-        filters.push('AND');
-        filters.push(['entity', 'anyof', params.custpage_customer]);
+        filters.push('AND', ['entity', 'anyof', params.custpage_customer]);
       }
 
       if (params.custpage_min_amount) {
-        filters.push('AND');
-        filters.push(['amountremaining', 'greaterthanorequalto', params.custpage_min_amount]);
+        filters.push('AND', ['amountremaining', 'greaterthanorequalto', params.custpage_min_amount]);
       }
 
       const invoiceSearch = search.create({
         type: search.Type.INVOICE,
-        filters: filters,
+        filters,
         columns: [
           search.createColumn({ name: 'tranid' }),
           search.createColumn({ name: 'entity' }),
@@ -371,15 +272,13 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
 
       const results = [];
 
-      invoiceSearch.run().each(function(result) {
+      invoiceSearch.run().each((result) => {
         const dueDate = result.getValue({ name: 'duedate' });
         const daysOverdue = utils.calculateDaysOverdue(new Date(dueDate));
         const agingBucket = utils.getAgingBucket(daysOverdue);
 
-        if (params.custpage_aging) {
-          if (!matchesAgingFilter(params.custpage_aging, agingBucket)) {
-            return true;
-          }
+        if (params.custpage_aging && !matchesAgingFilter(params.custpage_aging, agingBucket)) {
+          return true;
         }
 
         results.push({
@@ -389,9 +288,9 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
           customerName: result.getValue({ name: 'companyname', join: 'customer' }) ||
                        result.getText({ name: 'entity' }),
           customerEmail: result.getValue({ name: 'email', join: 'customer' }),
-          dueDate: dueDate,
-          daysOverdue: daysOverdue,
-          agingBucket: agingBucket,
+          dueDate,
+          daysOverdue,
+          agingBucket,
           amountRemaining: parseFloat(result.getValue({ name: 'amountremaining' })) || 0
         });
 
@@ -399,7 +298,7 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
       });
 
       return results;
-    }
+    };
 
     /**
      * Checks if aging bucket matches filter
@@ -407,25 +306,20 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
      * @param {string} bucket - Aging bucket
      * @returns {boolean} True if matches
      */
-    function matchesAgingFilter(filter, bucket) {
-      switch (filter) {
-        case '1-30':
-          return bucket === '1-30 Days';
-        case '31-60':
-          return bucket === '31-60 Days';
-        case '61-90':
-          return bucket === '61-90 Days';
-        case 'over90':
-          return bucket === 'Over 90 Days';
-        default:
-          return true;
-      }
-    }
+    const matchesAgingFilter = (filter, bucket) => {
+      const filterMap = {
+        '1-30': '1-30 Days',
+        '31-60': '31-60 Days',
+        '61-90': '61-90 Days',
+        'over90': 'Over 90 Days'
+      };
+      return filterMap[filter] === bucket;
+    };
 
     /**
      * Triggers the scheduled reminder script
      */
-    function triggerReminderScript() {
+    const triggerReminderScript = () => {
       const scriptTask = task.create({
         taskType: task.TaskType.SCHEDULED_SCRIPT,
         scriptId: 'customscript_otc_ss_overdue_reminder',
@@ -433,15 +327,9 @@ define(['N/ui/serverWidget', 'N/search', 'N/url', 'N/redirect', 'N/task', 'N/run
       });
 
       const taskId = scriptTask.submit();
-
-      log.audit({
-        title: 'Reminder Script Triggered',
-        details: 'Task ID: ' + taskId
-      });
-    }
-
-    return {
-      onRequest: onRequest
+      log.audit({ title: 'Reminder Script Triggered', details: `Task ID: ${taskId}` });
     };
+
+    return { onRequest };
 
   });

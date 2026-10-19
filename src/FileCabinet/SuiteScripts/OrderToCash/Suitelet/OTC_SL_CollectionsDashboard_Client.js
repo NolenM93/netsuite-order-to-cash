@@ -9,39 +9,32 @@
  * @author Nolen Millington
  */
 define(['N/currentRecord', 'N/dialog'],
-  function(currentRecord, dialog) {
+  (currentRecord, dialog) => {
 
     /**
      * Page initialization
-     * @param {Object} context - Script context
+     * @param {Object} _context - Script context (unused)
      */
-    function pageInit(_context) {
+    const pageInit = (_context) => {
       // No initialization needed
-    }
+    };
 
     /**
      * Triggers the send reminders action
      */
-    function sendReminders() {
+    const sendReminders = () => {
       dialog.confirm({
         title: 'Send Reminder Emails',
         message: 'This will send reminder emails to all customers with overdue invoices. Continue?'
-      }).then(function(result) {
+      }).then((result) => {
         if (result) {
           const rec = currentRecord.get();
-          rec.setValue({
-            fieldId: 'custpage_action',
-            value: 'send_reminders'
-          });
-
+          rec.setValue({ fieldId: 'custpage_action', value: 'send_reminders' });
           document.forms[0].submit();
         }
       });
-    }
-
-    return {
-      pageInit: pageInit,
-      sendReminders: sendReminders
     };
+
+    return { pageInit, sendReminders };
 
   });
