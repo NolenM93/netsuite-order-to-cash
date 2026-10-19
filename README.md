@@ -2,24 +2,23 @@
 
 [![CI](https://github.com/NolenM93/netsuite-order-to-cash/actions/workflows/ci.yml/badge.svg)](https://github.com/NolenM93/netsuite-order-to-cash/actions/workflows/ci.yml)
 
-A portfolio-quality Oracle NetSuite customization project demonstrating SuiteScript 2.1 development patterns within the SuiteCloud Development Framework (SDF).
+A NetSuite SuiteScript 2.1 / SDF project implementing common order-to-cash customizations.
 
 **Author:** Nolen Millington ([@NolenM93](https://github.com/NolenM93))
 
 ---
 
-## Highlights for Reviewers
+## Highlights
 
-- **Modern SuiteScript 2.1**: Arrow functions, template literals, destructuring, `const`/`let`, shorthand object returns
-- **Proper Error Handling**: Uses `N/error.create()` with named error codes (`OTC_CREDIT_LIMIT_EXCEEDED`, etc.)
-- **Configurable via Script Parameters**: Thresholds, assignees, and batch sizes are externalized—not hardcoded
+- **Modern SuiteScript 2.1**: Arrow functions, template literals, destructuring, `const`/`let`
+- **Proper Error Handling**: `N/error.create()` with named error codes (`OTC_CREDIT_LIMIT_EXCEEDED`, etc.)
+- **Configurable via Script Parameters**: Thresholds, assignees, and batch sizes are externalized
 - **XSS Prevention**: `escapeHtml()` helper protects INLINEHTML and Suitelet output
 - **Governance Awareness**: Scheduled script checks `getRemainingUsage()` inside its loop; Map/Reduce returns search object directly from `getInputData()`
-- **Smart EDIT Handling**: Credit check on EDIT only runs when customer or total changed (avoids false blocks)
-- **118 Passing Tests**: Comprehensive unit tests with **93%+ code coverage** using `@oracle/suitecloud-unit-testing`
-- **Clean Commits**: Logical, well-messaged commit history like a real developer workflow
+- **Smart EDIT Handling**: Credit check on EDIT only runs when customer or total changed
+- **Unit Tests**: 93%+ code coverage using `@oracle/suitecloud-unit-testing`
 
-> **Honesty Note:** This project is built and unit-tested against SuiteCloud mocks. It has not been deployed to a production NetSuite account. No fake metrics or fictional client names.
+> **Note:** Built and unit-tested against SuiteCloud mocks; not yet deployed to a live NetSuite account. Acme Wholesale Distributors is a fictional business used for the scenario.
 
 ---
 
@@ -216,7 +215,7 @@ suitecloud project:deploy --accountspecificvalues WARNING
 ### Governance Best Practices in This Project
 
 - **Scheduled Script**: Checks `getRemainingUsage()` inside the processing loop; stops gracefully when threshold reached
-- **Map/Reduce**: Returns search object directly from `getInputData()` (no memory buildup); comprehensive error reporting in `summarize()`
+- **Map/Reduce**: Returns search object directly from `getInputData()` (no memory buildup); error reporting in `summarize()`
 - **Utility Functions**: Pure functions that don't consume governance units
 
 ## Testing
@@ -238,7 +237,7 @@ npm run lint:fix            # Auto-fix linting errors
 
 ### Test Results
 
-- **118 tests passing** across 7 test suites
+- **126 tests passing** across 7 test suites
 - **ESLint: Clean** (0 errors, 0 warnings)
 - **CI: Passing** ✅
 
@@ -246,10 +245,10 @@ npm run lint:fix            # Auto-fix linting errors
 
 | Metric | Coverage | Threshold |
 |--------|----------|-----------|
-| Statements | 93.52% | 85% |
-| Branches | 83.97% | 75% |
-| Functions | 96.51% | 85% |
-| Lines | 93.38% | 85% |
+| Statements | 93.57% | 85% |
+| Branches | 84.19% | 75% |
+| Functions | 96.55% | 85% |
+| Lines | 93.44% | 85% |
 
 Coverage is measured using `@oracle/suitecloud-unit-testing` with `babel-plugin-transform-amd-to-commonjs` to convert SuiteScript's AMD modules to CommonJS for Jest instrumentation.
 
@@ -311,4 +310,4 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-*This is a demonstration project for portfolio purposes. Acme Wholesale Distributors is a fictional company.*
+*Acme Wholesale Distributors is a fictional company used for this demo.*
