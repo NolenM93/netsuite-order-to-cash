@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<savedsearch scriptid="customsearch_otc_overdue_invoices">
+    <definition>TRANSACTION</definition>
+    <title>OTC - Overdue Invoices</title>
+    <description>Lists all open invoices that are past their due date</description>
+    <ispublic>T</ispublic>
+    <criteria>
+        <criterion>
+            <column>mainline</column>
+            <operator>is</operator>
+            <value>T</value>
+        </criterion>
+        <criterion>
+            <column>type</column>
+            <operator>anyof</operator>
+            <value>CustInvc</value>
+        </criterion>
+        <criterion>
+            <column>status</column>
+            <operator>anyof</operator>
+            <value>CustInvc:A</value>
+        </criterion>
+        <criterion>
+            <column>duedate</column>
+            <operator>before</operator>
+            <value>today</value>
+        </criterion>
+        <criterion>
+            <column>amountremaining</column>
+            <operator>greaterthan</operator>
+            <value>0</value>
+        </criterion>
+    </criteria>
+    <columns>
+        <column>
+            <name>tranid</name>
+            <label>Invoice #</label>
+        </column>
+        <column>
+            <name>entity</name>
+            <label>Customer</label>
+        </column>
+        <column>
+            <name>trandate</name>
+            <label>Date</label>
+        </column>
+        <column>
+            <name>duedate</name>
+            <label>Due Date</label>
+            <sort>ASC</sort>
+        </column>
+        <column>
+            <name>amountremaining</name>
+            <label>Amount Remaining</label>
+        </column>
+        <column>
+            <name>total</name>
+            <label>Total</label>
+        </column>
+        <column>
+            <name>email</name>
+            <join>customer</join>
+            <label>Customer Email</label>
+        </column>
+    </columns>
+</savedsearch>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customrecordtype scriptid="customrecord_otc_ar_aging">
+    <recordname>AR Aging Summary</recordname>
+    <description>Stores customer AR aging bucket summaries calculated by Map/Reduce script</description>
+    <accesstype>USEPERMISSIONLIST</accesstype>
+    <allowattachments>F</allowattachments>
+    <allowinlineediting>F</allowinlineediting>
+    <allowquickadd>F</allowquickadd>
+    <allowquicksearch>T</allowquicksearch>
+    <allowuiaccess>T</allowuiaccess>
+    <customrecordcustomfields>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_customer">
+            <label>Customer</label>
+            <fieldtype>SELECT</fieldtype>
+            <selectrecordtype>-2</selectrecordtype>
+            <showinlist>T</showinlist>
+            <ismandatory>T</ismandatory>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_current">
+            <label>Current</label>
+            <fieldtype>CURRENCY</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_1_30">
+            <label>1-30 Days</label>
+            <fieldtype>CURRENCY</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_31_60">
+            <label>31-60 Days</label>
+            <fieldtype>CURRENCY</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_61_90">
+            <label>61-90 Days</label>
+            <fieldtype>CURRENCY</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_over_90">
+            <label>Over 90 Days</label>
+            <fieldtype>CURRENCY</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_total">
+            <label>Total Outstanding</label>
+            <fieldtype>CURRENCY</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_invoice_count">
+            <label>Invoice Count</label>
+            <fieldtype>INTEGER</fieldtype>
+            <showinlist>T</showinlist>
+            <defaultvalue>0</defaultvalue>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_oldest_days">
+            <label>Oldest Invoice Days</label>
+            <fieldtype>INTEGER</fieldtype>
+            <showinlist>T</showinlist>
+        </customrecordcustomfield>
+        <customrecordcustomfield scriptid="custrecord_otc_aging_last_updated">
+            <label>Last Updated</label>
+            <fieldtype>DATETIMETZ</fieldtype>
+            <showinlist>T</showinlist>
+        </customrecordcustomfield>
+    </customrecordcustomfields>
+</customrecordtype>

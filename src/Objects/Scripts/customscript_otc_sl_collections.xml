@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suitelet scriptid="customscript_otc_sl_collections">
+    <name>OTC - Collections Dashboard</name>
+    <description>Internal dashboard for viewing and managing overdue invoices</description>
+    <scriptfile>[/SuiteScripts/OrderToCash/Suitelet/OTC_SL_CollectionsDashboard.js]</scriptfile>
+    <notifyowner>F</notifyowner>
+    <scriptdeployments>
+        <scriptdeployment scriptid="customdeploy_otc_sl_collections">
+            <status>RELEASED</status>
+            <title>OTC SL Collections Deploy</title>
+            <isdeployed>T</isdeployed>
+            <loglevel>DEBUG</loglevel>
+            <allroles>F</allroles>
+            <runasrole>ADMINISTRATOR</runasrole>
+        </scriptdeployment>
+    </scriptdeployments>
+</suitelet>

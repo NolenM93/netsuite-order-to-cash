@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<emailtemplate scriptid="custemailtmpl_otc_overdue_reminder">
+    <name>OTC - Overdue Invoice Reminder</name>
+    <description>Email template for overdue invoice reminders sent by scheduled script</description>
+    <subject>Payment Reminder: Invoice ${invoice.tranid} Past Due</subject>
+    <mediaitem>[/SuiteScripts/OrderToCash/templates/overdue_reminder.html]</mediaitem>
+    <addunsubscribelink>F</addunsubscribelink>
+    <addcompanyaddress>T</addcompanyaddress>
+    <isprivate>F</isprivate>
+    <recordtype>TRANSACTION</recordtype>
+</emailtemplate>

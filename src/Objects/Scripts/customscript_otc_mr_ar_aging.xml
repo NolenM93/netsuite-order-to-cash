@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mapreducescript scriptid="customscript_otc_mr_ar_aging">
+    <name>OTC - AR Aging Summary</name>
+    <description>Map/Reduce script to calculate and store customer AR aging summaries</description>
+    <scriptfile>[/SuiteScripts/OrderToCash/MapReduce/OTC_MR_ARAgingSummary.js]</scriptfile>
+    <notifyowner>T</notifyowner>
+    <scriptdeployments>
+        <scriptdeployment scriptid="customdeploy_otc_mr_ar_aging">
+            <status>RELEASED</status>
+            <title>OTC MR AR Aging Deploy</title>
+            <isdeployed>T</isdeployed>
+            <loglevel>DEBUG</loglevel>
+        </scriptdeployment>
+    </scriptdeployments>
+</mapreducescript>

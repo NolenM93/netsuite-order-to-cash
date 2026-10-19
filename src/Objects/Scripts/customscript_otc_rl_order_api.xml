@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<restlet scriptid="customscript_otc_rl_order_api">
+    <name>OTC - Order API</name>
+    <description>RESTlet API for order status lookup and lead creation from external systems</description>
+    <scriptfile>[/SuiteScripts/OrderToCash/RESTlet/OTC_RL_OrderAPI.js]</scriptfile>
+    <notifyowner>F</notifyowner>
+    <scriptdeployments>
+        <scriptdeployment scriptid="customdeploy_otc_rl_order_api">
+            <status>RELEASED</status>
+            <title>OTC RL Order API Deploy</title>
+            <isdeployed>T</isdeployed>
+            <loglevel>DEBUG</loglevel>
+            <allroles>F</allroles>
+        </scriptdeployment>
+    </scriptdeployments>
+</restlet>

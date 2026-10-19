@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entitycustomfield scriptid="custentity_otc_web_lead">
+    <label>Web Lead</label>
+    <description>Indicates lead was created via website form through RESTlet API</description>
+    <fieldtype>CHECKBOX</fieldtype>
+    <appliestocustomer>T</appliestocustomer>
+    <appliestolead>T</appliestolead>
+    <appliestocontact>F</appliestocontact>
+    <appliestoemployee>F</appliestoemployee>
+    <appliestovendor>F</appliestovendor>
+    <appliestopartner>F</appliestopartner>
+    <appliestoothername>F</appliestoothername>
+    <appliestogroup>F</appliestogroup>
+    <appliestoproject>F</appliestoproject>
+    <defaultchecked>F</defaultchecked>
+    <checkspelling>F</checkspelling>
+    <displaytype>NORMAL</displaytype>
+    <showinlist>T</showinlist>
+    <storevalue>T</storevalue>
+</entitycustomfield>

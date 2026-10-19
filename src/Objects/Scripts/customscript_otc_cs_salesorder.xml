@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<clientscript scriptid="customscript_otc_cs_salesorder">
+    <name>OTC - Sales Order Client Script</name>
+    <description>Client-side validation and field automation for sales orders</description>
+    <scriptfile>[/SuiteScripts/OrderToCash/Client/OTC_CS_SalesOrder.js]</scriptfile>
+    <notifyowner>F</notifyowner>
+    <scriptdeployments>
+        <scriptdeployment scriptid="customdeploy_otc_cs_salesorder">
+            <recordtype>SALESORDER</recordtype>
+            <status>RELEASED</status>
+            <title>OTC CS Sales Order Deploy</title>
+            <isdeployed>T</isdeployed>
+            <loglevel>DEBUG</loglevel>
+            <allroles>T</allroles>
+        </scriptdeployment>
+    </scriptdeployments>
+</clientscript>

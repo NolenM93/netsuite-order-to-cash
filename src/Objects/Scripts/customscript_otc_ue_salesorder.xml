@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<usereventscript scriptid="customscript_otc_ue_salesorder">
+    <name>OTC - Sales Order User Event</name>
+    <description>Manages credit status display, validation, and large order task creation</description>
+    <scriptfile>[/SuiteScripts/OrderToCash/UserEvent/OTC_UE_SalesOrder.js]</scriptfile>
+    <notifyowner>F</notifyowner>
+    <scriptdeployments>
+        <scriptdeployment scriptid="customdeploy_otc_ue_salesorder">
+            <recordtype>SALESORDER</recordtype>
+            <status>RELEASED</status>
+            <title>OTC UE Sales Order Deploy</title>
+            <isdeployed>T</isdeployed>
+            <loglevel>DEBUG</loglevel>
+            <allroles>T</allroles>
+        </scriptdeployment>
+    </scriptdeployments>
+</usereventscript>

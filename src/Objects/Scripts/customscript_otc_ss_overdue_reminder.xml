@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scheduledscript scriptid="customscript_otc_ss_overdue_reminder">
+    <name>OTC - Overdue Invoice Reminder</name>
+    <description>Daily scheduled script to send reminder emails for overdue invoices</description>
+    <scriptfile>[/SuiteScripts/OrderToCash/Scheduled/OTC_SS_OverdueReminder.js]</scriptfile>
+    <notifyowner>T</notifyowner>
+    <scriptdeployments>
+        <scriptdeployment scriptid="customdeploy_otc_ss_overdue_reminder">
+            <status>RELEASED</status>
+            <title>OTC SS Overdue Reminder Deploy</title>
+            <isdeployed>T</isdeployed>
+            <loglevel>DEBUG</loglevel>
+            <recurrence>
+                <daily>
+                    <startdate>2024-01-01</startdate>
+                    <starttime>06:00:00</starttime>
+                    <everyxdays>1</everyxdays>
+                </daily>
+            </recurrence>
+        </scriptdeployment>
+    </scriptdeployments>
+</scheduledscript>
