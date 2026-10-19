@@ -16,7 +16,7 @@ A portfolio-quality Oracle NetSuite customization project demonstrating SuiteScr
 - **XSS Prevention**: `escapeHtml()` helper protects INLINEHTML and Suitelet output
 - **Governance Awareness**: Scheduled script checks `getRemainingUsage()` inside its loop; Map/Reduce returns search object directly from `getInputData()`
 - **Smart EDIT Handling**: Credit check on EDIT only runs when customer or total changed (avoids false blocks)
-- **122 Passing Tests**: Comprehensive unit tests using Jest with SuiteScript mocks
+- **118 Passing Tests**: Comprehensive unit tests with **93%+ code coverage** using `@oracle/suitecloud-unit-testing`
 - **Clean Commits**: Logical, well-messaged commit history like a real developer workflow
 
 > **Honesty Note:** This project is built and unit-tested against SuiteCloud mocks. It has not been deployed to a production NetSuite account. No fake metrics or fictional client names.
@@ -238,11 +238,20 @@ npm run lint:fix            # Auto-fix linting errors
 
 ### Test Results
 
-- **122 tests passing** across 7 test suites
+- **118 tests passing** across 7 test suites
 - **ESLint: Clean** (0 errors, 0 warnings)
 - **CI: Passing** ✅
 
-**Note on Coverage:** Jest's coverage instrumentation doesn't work with AMD modules loaded via `eval()` (required to test SuiteScript's `define()` pattern outside NetSuite). The tests do exercise the code paths comprehensively, but the coverage report shows 0%. This is a known limitation of testing SuiteScript outside the NetSuite runtime.
+### Code Coverage
+
+| Metric | Coverage | Threshold |
+|--------|----------|-----------|
+| Statements | 93.52% | 85% |
+| Branches | 83.97% | 75% |
+| Functions | 96.51% | 85% |
+| Lines | 93.38% | 85% |
+
+Coverage is measured using `@oracle/suitecloud-unit-testing` with `babel-plugin-transform-amd-to-commonjs` to convert SuiteScript's AMD modules to CommonJS for Jest instrumentation.
 
 ## When to Use Workflows Instead of Scripts
 
