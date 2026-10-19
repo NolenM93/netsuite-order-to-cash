@@ -3,80 +3,51 @@
  * Tests User Event script entry points for Sales Order
  */
 
-const fs = require('fs');
-const path = require('path');
-
-// Mock N/ modules
-const mockRecord = {
+// Mock N/ modules before requiring the script
+jest.mock('N/record', () => ({
   create: jest.fn(),
   Type: { TASK: 'task' }
-};
+}), { virtual: true });
 
-const mockSearch = {
+jest.mock('N/search', () => ({
   lookupFields: jest.fn(),
   Type: { CUSTOMER: 'customer' }
-};
+}), { virtual: true });
 
-const mockServerWidget = {
+jest.mock('N/ui/serverWidget', () => ({
   FieldType: { INLINEHTML: 'inlinehtml' }
-};
+}), { virtual: true });
 
-const mockRuntime = {
+jest.mock('N/runtime', () => ({
   getCurrentScript: jest.fn(() => ({
     getParameter: jest.fn().mockReturnValue(null)
   }))
-};
+}), { virtual: true });
 
-const mockError = {
+jest.mock('N/error', () => ({
   create: jest.fn((opts) => {
     const err = new Error(opts.message);
     err.name = opts.name;
     return err;
   })
-};
+}), { virtual: true });
 
-// Load utils module
-const utilsContent = fs.readFileSync(
-  path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
-  'utf8'
-);
-let utilsFactory;
-// eslint-disable-next-line no-unused-vars
-const mockDefineUtils = (deps, factory) => {
-  utilsFactory = typeof deps === 'function' ? deps : factory;
-};
-eval(utilsContent.replace('define(', 'mockDefineUtils('));
-const utils = utilsFactory();
+// Get mocked modules
+const record = require('N/record');
+const search = require('N/search');
+const runtime = require('N/runtime');
+const error = require('N/error');
 
-// Load script module
-const scriptContent = fs.readFileSync(
-  path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/UserEvent/OTC_UE_SalesOrder.js'),
-  'utf8'
-);
-
-let scriptFactory;
-// eslint-disable-next-line no-unused-vars
-const mockDefine = (deps, factory) => {
-  scriptFactory = factory;
-};
-
-global.log = {
-  debug: jest.fn(),
-  audit: jest.fn(),
-  error: jest.fn()
-};
-
-eval(scriptContent.replace('define(', 'mockDefine('));
+// Load the script under test
+const script = require('../../src/FileCabinet/SuiteScripts/OrderToCash/UserEvent/OTC_UE_SalesOrder');
 
 describe('OTC_UE_SalesOrder', () => {
-  let script;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockRuntime.getCurrentScript.mockReturnValue({
+    runtime.getCurrentScript.mockReturnValue({
       getParameter: jest.fn().mockReturnValue(null)
     });
-    script = scriptFactory(mockRecord, mockSearch, mockServerWidget, mockRuntime, mockError, utils);
   });
 
   describe('beforeLoad', () => {
@@ -101,7 +72,7 @@ describe('OTC_UE_SalesOrder', () => {
         form: { addField: jest.fn().mockReturnValue(mockField) }
       };
 
-      mockSearch.lookupFields.mockReturnValue({
+      search.lookupFields.mockReturnValue({
         creditlimit: '10000',
         balance: '5000',
         companyname: 'Test Customer'
@@ -138,7 +109,7 @@ describe('OTC_UE_SalesOrder', () => {
         form: { addField: jest.fn().mockReturnValue(mockField) }
       };
 
-      mockSearch.lookupFields.mockReturnValue({
+      search.lookupFields.mockReturnValue({
         creditlimit: '10000',
         balance: '5000',
         companyname: '<script>alert("xss")</script>'
@@ -176,7 +147,7 @@ describe('OTC_UE_SalesOrder', () => {
       };
 
       expect(() => script.beforeSubmit(context)).toThrow();
-      expect(mockError.create).toHaveBeenCalledWith(
+      expect(error.create).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'OTC_MISSING_FIELDS' })
       );
     });
@@ -196,13 +167,13 @@ describe('OTC_UE_SalesOrder', () => {
         }
       };
 
-      mockSearch.lookupFields.mockReturnValue({
+      search.lookupFields.mockReturnValue({
         creditlimit: '10000',
         balance: '5000'
       });
 
       expect(() => script.beforeSubmit(context)).toThrow();
-      expect(mockError.create).toHaveBeenCalledWith(
+      expect(error.create).toHaveBeenCalledWith(
         expect.objectContaining({ name: 'OTC_CREDIT_LIMIT_EXCEEDED' })
       );
     });
@@ -229,7 +200,7 @@ describe('OTC_UE_SalesOrder', () => {
         }
       };
 
-      mockSearch.lookupFields.mockReturnValue({
+      search.lookupFields.mockReturnValue({
         creditlimit: '10000',
         balance: '8000'
       });
@@ -259,7 +230,7 @@ describe('OTC_UE_SalesOrder', () => {
         }
       };
 
-      mockSearch.lookupFields.mockReturnValue({
+      search.lookupFields.mockReturnValue({
         creditlimit: '10000',
         balance: '5000'
       });
@@ -289,7 +260,7 @@ describe('OTC_UE_SalesOrder', () => {
         }
       };
 
-      mockSearch.lookupFields.mockReturnValue({
+      search.lookupFields.mockReturnValue({
         creditlimit: '0',
         balance: '0'
       });
@@ -307,7 +278,7 @@ describe('OTC_UE_SalesOrder', () => {
       };
 
       script.afterSubmit(context);
-      expect(mockRecord.create).not.toHaveBeenCalled();
+      expect(record.create).not.toHaveBeenCalled();
     });
 
     it('should skip for small orders', () => {
@@ -318,7 +289,7 @@ describe('OTC_UE_SalesOrder', () => {
       };
 
       script.afterSubmit(context);
-      expect(mockRecord.create).not.toHaveBeenCalled();
+      expect(record.create).not.toHaveBeenCalled();
     });
 
     it('should create task for large orders', () => {
@@ -326,7 +297,7 @@ describe('OTC_UE_SalesOrder', () => {
         setValue: jest.fn(),
         save: jest.fn().mockReturnValue(456)
       };
-      mockRecord.create.mockReturnValue(mockTask);
+      record.create.mockReturnValue(mockTask);
 
       const context = {
         type: 'create',
@@ -345,7 +316,7 @@ describe('OTC_UE_SalesOrder', () => {
 
       script.afterSubmit(context);
 
-      expect(mockRecord.create).toHaveBeenCalledWith({
+      expect(record.create).toHaveBeenCalledWith({
         type: 'task',
         isDynamic: true
       });
@@ -354,7 +325,7 @@ describe('OTC_UE_SalesOrder', () => {
     });
 
     it('should use custom threshold from script parameter', () => {
-      mockRuntime.getCurrentScript.mockReturnValue({
+      runtime.getCurrentScript.mockReturnValue({
         getParameter: jest.fn((opts) => {
           if (opts.name === 'custscript_otc_large_order_amt') return 5000;
           return null;
@@ -365,7 +336,7 @@ describe('OTC_UE_SalesOrder', () => {
         setValue: jest.fn(),
         save: jest.fn().mockReturnValue(456)
       };
-      mockRecord.create.mockReturnValue(mockTask);
+      record.create.mockReturnValue(mockTask);
 
       const context = {
         type: 'create',
@@ -381,10 +352,9 @@ describe('OTC_UE_SalesOrder', () => {
         }
       };
 
-      script = scriptFactory(mockRecord, mockSearch, mockServerWidget, mockRuntime, mockError, utils);
       script.afterSubmit(context);
 
-      expect(mockRecord.create).toHaveBeenCalled();
+      expect(record.create).toHaveBeenCalled();
     });
   });
 });

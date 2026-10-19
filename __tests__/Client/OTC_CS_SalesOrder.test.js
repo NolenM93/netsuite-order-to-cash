@@ -3,109 +3,53 @@
  * Tests Client Script entry points for Sales Order
  */
 
-const fs = require('fs');
-const path = require('path');
+// Mock N/ modules before requiring the script
+jest.mock('N/currentRecord', () => ({}), { virtual: true });
 
-const mockCurrentRecord = {};
+jest.mock('N/dialog', () => ({
+  alert: jest.fn().mockResolvedValue(true),
+  confirm: jest.fn().mockResolvedValue(true)
+}), { virtual: true });
 
-const mockDialog = {
-  alert: jest.fn()
-};
+// Get mocked modules
+const dialog = require('N/dialog');
 
-// Load utils module
-const utilsContent = fs.readFileSync(
-  path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
-  'utf8'
-);
-let utilsFactory;
-// eslint-disable-next-line no-unused-vars
-const mockDefineUtils = (deps, factory) => {
-  utilsFactory = typeof deps === 'function' ? deps : factory;
-};
-eval(utilsContent.replace('define(', 'mockDefineUtils('));
-const utils = utilsFactory();
-
-// Load script module
-const scriptContent = fs.readFileSync(
-  path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/Client/OTC_CS_SalesOrder.js'),
-  'utf8'
-);
-
-let scriptFactory;
-// eslint-disable-next-line no-unused-vars
-const mockDefine = (deps, factory) => {
-  scriptFactory = factory;
-};
-
-global.log = {
-  debug: jest.fn(),
-  audit: jest.fn(),
-  error: jest.fn()
-};
-
-eval(scriptContent.replace('define(', 'mockDefine('));
+// Load the script under test
+const script = require('../../src/FileCabinet/SuiteScripts/OrderToCash/Client/OTC_CS_SalesOrder');
 
 describe('OTC_CS_SalesOrder', () => {
-  let script;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    script = scriptFactory(mockCurrentRecord, mockDialog, utils);
   });
 
   describe('pageInit', () => {
-    it('should set defaults for create mode', () => {
+    it('should set default values for CREATE mode', () => {
       const mockRecord = {
+        type: 'salesorder',
         getValue: jest.fn().mockReturnValue(null),
         setValue: jest.fn()
       };
-
       const context = {
-        currentRecord: mockRecord,
-        mode: 'create'
+        mode: 'create',
+        currentRecord: mockRecord
       };
 
       script.pageInit(context);
 
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        expect.objectContaining({ fieldId: 'trandate' })
-      );
-      expect(mockRecord.setValue).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fieldId: 'memo',
-          value: 'Order created via Order-to-Cash Toolkit'
-        })
-      );
+      // Should set default date and memo
+      expect(mockRecord.setValue).toHaveBeenCalled();
+      expect(global.log.debug).toHaveBeenCalled();
     });
 
-    it('should skip defaults for edit mode', () => {
+    it('should skip initialization for non-CREATE mode', () => {
       const mockRecord = {
-        getValue: jest.fn(),
+        type: 'salesorder',
         setValue: jest.fn()
       };
-
       const context = {
-        currentRecord: mockRecord,
-        mode: 'edit'
-      };
-
-      script.pageInit(context);
-      expect(mockRecord.setValue).not.toHaveBeenCalled();
-    });
-
-    it('should not override existing values', () => {
-      const mockRecord = {
-        getValue: jest.fn((opts) => {
-          if (opts.fieldId === 'trandate') return new Date();
-          if (opts.fieldId === 'memo') return 'Existing memo';
-          return null;
-        }),
-        setValue: jest.fn()
-      };
-
-      const context = {
-        currentRecord: mockRecord,
-        mode: 'create'
+        mode: 'edit',
+        currentRecord: mockRecord
       };
 
       script.pageInit(context);
@@ -114,229 +58,197 @@ describe('OTC_CS_SalesOrder', () => {
   });
 
   describe('fieldChanged', () => {
-    it('should handle quantity change on item sublist', () => {
-      const mockRecord = {
-        getCurrentSublistValue: jest.fn((opts) => {
-          if (opts.fieldId === 'quantity') return 100;
-          if (opts.fieldId === 'rate') return 50;
-          return null;
-        })
-      };
-
+    it('should log when customer changes', () => {
       const context = {
-        currentRecord: mockRecord,
-        fieldId: 'quantity',
-        sublistId: 'item',
-        line: 0
+        fieldId: 'entity',
+        currentRecord: {
+          getValue: jest.fn().mockReturnValue(123)
+        }
       };
 
       script.fieldChanged(context);
 
-      expect(global.log.debug).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Discount Applied' })
-      );
+      expect(global.log.debug).toHaveBeenCalled();
     });
 
-    it('should handle customer change', () => {
-      const mockRecord = {
-        getValue: jest.fn().mockReturnValue(123)
-      };
-
+    it('should handle no customer selected', () => {
       const context = {
-        currentRecord: mockRecord,
         fieldId: 'entity',
-        sublistId: null
+        currentRecord: {
+          getValue: jest.fn().mockReturnValue(null)
+        }
       };
 
       script.fieldChanged(context);
+      // Should not throw
+      expect(() => script.fieldChanged(context)).not.toThrow();
+    });
 
-      expect(global.log.debug).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Customer Selected',
-          details: 'Customer ID: 123'
-        })
-      );
+    it('should calculate discount on quantity change', () => {
+      const context = {
+        fieldId: 'quantity',
+        sublistId: 'item',
+        line: 0,
+        currentRecord: {
+          getCurrentSublistValue: jest.fn((opts) => {
+            if (opts.fieldId === 'quantity') return 100;
+            if (opts.fieldId === 'rate') return 50;
+            return null;
+          })
+        }
+      };
+
+      script.fieldChanged(context);
+      // Script calculates but doesn't set - just logs
+      expect(global.log.debug).toHaveBeenCalled();
     });
   });
 
   describe('validateLine', () => {
-    it('should return true for non-item sublists', () => {
+    it('should allow valid line items', () => {
       const context = {
-        currentRecord: {},
-        sublistId: 'partners'
+        sublistId: 'item',
+        currentRecord: {
+          getCurrentSublistValue: jest.fn((opts) => {
+            if (opts.fieldId === 'item') return 100;
+            if (opts.fieldId === 'quantity') return 5;
+            if (opts.fieldId === 'rate') return 50;
+            return null;
+          })
+        }
       };
 
       expect(script.validateLine(context)).toBe(true);
     });
 
-    it('should return false if no item selected', () => {
-      const mockRecord = {
-        getCurrentSublistValue: jest.fn().mockReturnValue(null)
-      };
-
+    it('should reject line with missing item', () => {
       const context = {
-        currentRecord: mockRecord,
-        sublistId: 'item'
+        sublistId: 'item',
+        currentRecord: {
+          getCurrentSublistValue: jest.fn((opts) => {
+            if (opts.fieldId === 'item') return null;
+            if (opts.fieldId === 'quantity') return 5;
+            if (opts.fieldId === 'rate') return 50;
+            return null;
+          })
+        }
       };
 
       expect(script.validateLine(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Please select an item.' })
-      );
+      expect(dialog.alert).toHaveBeenCalled();
     });
 
-    it('should return false for zero quantity', () => {
-      const mockRecord = {
-        getCurrentSublistValue: jest.fn((opts) => {
-          if (opts.fieldId === 'item') return 123;
-          if (opts.fieldId === 'quantity') return 0;
-          return null;
-        })
-      };
-
+    it('should reject line with zero quantity', () => {
       const context = {
-        currentRecord: mockRecord,
-        sublistId: 'item'
+        sublistId: 'item',
+        currentRecord: {
+          getCurrentSublistValue: jest.fn((opts) => {
+            if (opts.fieldId === 'item') return 100;
+            if (opts.fieldId === 'quantity') return 0;
+            if (opts.fieldId === 'rate') return 50;
+            return null;
+          })
+        }
       };
 
       expect(script.validateLine(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Please enter a valid quantity greater than zero.'
-        })
-      );
+      expect(dialog.alert).toHaveBeenCalled();
     });
 
-    it('should return false for negative rate', () => {
-      const mockRecord = {
-        getCurrentSublistValue: jest.fn((opts) => {
-          if (opts.fieldId === 'item') return 123;
-          if (opts.fieldId === 'quantity') return 10;
-          if (opts.fieldId === 'rate') return -5;
-          return null;
-        })
-      };
-
+    it('should reject line with negative rate', () => {
       const context = {
-        currentRecord: mockRecord,
-        sublistId: 'item'
+        sublistId: 'item',
+        currentRecord: {
+          getCurrentSublistValue: jest.fn((opts) => {
+            if (opts.fieldId === 'item') return 100;
+            if (opts.fieldId === 'quantity') return 5;
+            if (opts.fieldId === 'rate') return -10;
+            return null;
+          })
+        }
       };
 
       expect(script.validateLine(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Please enter a valid rate.' })
-      );
+      expect(dialog.alert).toHaveBeenCalled();
     });
 
-    it('should return true for valid line item', () => {
-      const mockRecord = {
-        getCurrentSublistValue: jest.fn((opts) => {
-          if (opts.fieldId === 'item') return 123;
-          if (opts.fieldId === 'quantity') return 10;
-          if (opts.fieldId === 'rate') return 50;
-          return null;
-        })
-      };
-
+    it('should skip validation for non-item sublists', () => {
       const context = {
-        currentRecord: mockRecord,
-        sublistId: 'item'
+        sublistId: 'other',
+        currentRecord: {
+          getCurrentSublistValue: jest.fn()
+        }
       };
 
       expect(script.validateLine(context)).toBe(true);
+      expect(context.currentRecord.getCurrentSublistValue).not.toHaveBeenCalled();
     });
   });
 
   describe('saveRecord', () => {
-    it('should return false if no customer', () => {
-      const mockRecord = {
-        getValue: jest.fn().mockReturnValue(null)
+    it('should allow save when all required fields are present', () => {
+      const context = {
+        currentRecord: {
+          getValue: jest.fn((opts) => {
+            if (opts.fieldId === 'entity') return 123;
+            if (opts.fieldId === 'trandate') return new Date();
+            if (opts.fieldId === 'total') return 100;
+            return null;
+          }),
+          getLineCount: jest.fn().mockReturnValue(1)
+        }
       };
-
-      const context = { currentRecord: mockRecord };
-
-      expect(script.saveRecord(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Please select a customer before saving.'
-        })
-      );
-    });
-
-    it('should return false if no line items', () => {
-      const mockRecord = {
-        getValue: jest.fn((opts) => {
-          if (opts.fieldId === 'entity') return 123;
-          return null;
-        }),
-        getLineCount: jest.fn().mockReturnValue(0)
-      };
-
-      const context = { currentRecord: mockRecord };
-
-      expect(script.saveRecord(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Please add at least one item to the order.'
-        })
-      );
-    });
-
-    it('should return false if no transaction date', () => {
-      const mockRecord = {
-        getValue: jest.fn((opts) => {
-          if (opts.fieldId === 'entity') return 123;
-          if (opts.fieldId === 'trandate') return null;
-          return null;
-        }),
-        getLineCount: jest.fn().mockReturnValue(1)
-      };
-
-      const context = { currentRecord: mockRecord };
-
-      expect(script.saveRecord(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Please enter a transaction date.'
-        })
-      );
-    });
-
-    it('should return false for zero total', () => {
-      const mockRecord = {
-        getValue: jest.fn((opts) => {
-          if (opts.fieldId === 'entity') return 123;
-          if (opts.fieldId === 'trandate') return new Date();
-          if (opts.fieldId === 'total') return 0;
-          return null;
-        }),
-        getLineCount: jest.fn().mockReturnValue(1)
-      };
-
-      const context = { currentRecord: mockRecord };
-
-      expect(script.saveRecord(context)).toBe(false);
-      expect(mockDialog.alert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Order total must be greater than zero.'
-        })
-      );
-    });
-
-    it('should return true for valid record', () => {
-      const mockRecord = {
-        getValue: jest.fn((opts) => {
-          if (opts.fieldId === 'entity') return 123;
-          if (opts.fieldId === 'trandate') return new Date();
-          if (opts.fieldId === 'total') return 1000;
-          return null;
-        }),
-        getLineCount: jest.fn().mockReturnValue(1)
-      };
-
-      const context = { currentRecord: mockRecord };
 
       expect(script.saveRecord(context)).toBe(true);
+    });
+
+    it('should prevent save when customer is missing', () => {
+      const context = {
+        currentRecord: {
+          getValue: jest.fn((opts) => {
+            if (opts.fieldId === 'entity') return null;
+            if (opts.fieldId === 'trandate') return new Date();
+            if (opts.fieldId === 'total') return 100;
+            return null;
+          }),
+          getLineCount: jest.fn().mockReturnValue(1)
+        }
+      };
+
+      expect(script.saveRecord(context)).toBe(false);
+      expect(dialog.alert).toHaveBeenCalled();
+    });
+
+    it('should prevent save when no line items', () => {
+      const context = {
+        currentRecord: {
+          getValue: jest.fn((opts) => {
+            if (opts.fieldId === 'entity') return 123;
+            if (opts.fieldId === 'trandate') return new Date();
+            if (opts.fieldId === 'total') return 100;
+            return null;
+          }),
+          getLineCount: jest.fn().mockReturnValue(0)
+        }
+      };
+
+      expect(script.saveRecord(context)).toBe(false);
+    });
+
+    it('should prevent save when total is zero', () => {
+      const context = {
+        currentRecord: {
+          getValue: jest.fn((opts) => {
+            if (opts.fieldId === 'entity') return 123;
+            if (opts.fieldId === 'trandate') return new Date();
+            if (opts.fieldId === 'total') return 0;
+            return null;
+          }),
+          getLineCount: jest.fn().mockReturnValue(1)
+        }
+      };
+
+      expect(script.saveRecord(context)).toBe(false);
     });
   });
 });

@@ -3,22 +3,7 @@
  * Tests pure utility functions used across Order-to-Cash Toolkit
  */
 
-const fs = require('fs');
-const path = require('path');
-
-const moduleContent = fs.readFileSync(
-  path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
-  'utf8'
-);
-
-let moduleFactory;
-// eslint-disable-next-line no-unused-vars
-const mockDefine = (deps, factory) => {
-  moduleFactory = typeof deps === 'function' ? deps : factory;
-};
-eval(moduleContent.replace('define(', 'mockDefine('));
-
-const utils = moduleFactory();
+const utils = require('../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils');
 
 describe('OTC_Lib_Utils', () => {
 
