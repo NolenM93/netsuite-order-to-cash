@@ -4,6 +4,26 @@
     <description>Manages credit status display, validation, and large order task creation</description>
     <scriptfile>[/SuiteScripts/OrderToCash/UserEvent/OTC_UE_SalesOrder.js]</scriptfile>
     <notifyowner>F</notifyowner>
+    <scriptcustomfields>
+        <scriptcustomfield scriptid="custscript_otc_large_order_amt">
+            <label>Large Order Threshold</label>
+            <description>Order amount that triggers follow-up task creation</description>
+            <fieldtype>CURRENCY</fieldtype>
+            <defaultvalue>10000</defaultvalue>
+        </scriptcustomfield>
+        <scriptcustomfield scriptid="custscript_otc_credit_warn_pct">
+            <label>Credit Warning Percentage</label>
+            <description>Credit utilization threshold for warning status (0-1)</description>
+            <fieldtype>PERCENT</fieldtype>
+            <defaultvalue>90</defaultvalue>
+        </scriptcustomfield>
+        <scriptcustomfield scriptid="custscript_otc_task_assignee">
+            <label>Task Assignee</label>
+            <description>Default employee for large order follow-up tasks</description>
+            <fieldtype>SELECT</fieldtype>
+            <selectrecordtype>-4</selectrecordtype>
+        </scriptcustomfield>
+    </scriptcustomfields>
     <scriptdeployments>
         <scriptdeployment scriptid="customdeploy_otc_ue_salesorder">
             <recordtype>SALESORDER</recordtype>

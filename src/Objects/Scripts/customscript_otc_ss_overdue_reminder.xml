@@ -4,6 +4,32 @@
     <description>Daily scheduled script to send reminder emails for overdue invoices</description>
     <scriptfile>[/SuiteScripts/OrderToCash/Scheduled/OTC_SS_OverdueReminder.js]</scriptfile>
     <notifyowner>T</notifyowner>
+    <scriptcustomfields>
+        <scriptcustomfield scriptid="custscript_otc_gov_threshold">
+            <label>Governance Threshold</label>
+            <description>Stop processing when remaining units fall below this value</description>
+            <fieldtype>INTEGER</fieldtype>
+            <defaultvalue>200</defaultvalue>
+        </scriptcustomfield>
+        <scriptcustomfield scriptid="custscript_otc_units_per_email">
+            <label>Units Per Email</label>
+            <description>Estimated governance units consumed per email send</description>
+            <fieldtype>INTEGER</fieldtype>
+            <defaultvalue>10</defaultvalue>
+        </scriptcustomfield>
+        <scriptcustomfield scriptid="custscript_otc_email_sender">
+            <label>Email Sender</label>
+            <description>Employee to send reminder emails from</description>
+            <fieldtype>SELECT</fieldtype>
+            <selectrecordtype>-4</selectrecordtype>
+        </scriptcustomfield>
+        <scriptcustomfield scriptid="custscript_otc_batch_size">
+            <label>Batch Size</label>
+            <description>Maximum number of invoices to process per execution</description>
+            <fieldtype>INTEGER</fieldtype>
+            <defaultvalue>500</defaultvalue>
+        </scriptcustomfield>
+    </scriptcustomfields>
     <scriptdeployments>
         <scriptdeployment scriptid="customdeploy_otc_ss_overdue_reminder">
             <status>RELEASED</status>
