@@ -41,10 +41,22 @@ When working with sales orders, users need:
    - Customer is selected
    - Transaction date is set
    - At least one line item exists
-3. If customer has credit limit:
+3. Determine if credit check is needed (see Smart EDIT Handling below)
+4. If credit check required and customer has credit limit:
    - Calculate if (current balance + order total) > credit limit
    - If exceeded, throw error with clear message
 ```
+
+### Smart EDIT Credit Check
+
+On EDIT, the script avoids unnecessary credit blocks by only checking credit when:
+
+1. The **customer** field has changed, OR
+2. The **order total** has changed (by more than $0.01)
+
+AND the customer has a credit limit > 0.
+
+This prevents false blocks when users edit non-financial fields (memo, shipping instructions, etc.) on orders that were already approved.
 
 ### afterSubmit Logic
 
@@ -72,8 +84,12 @@ When working with sales orders, users need:
 
 ## Error Messages
 
-- **Missing fields:** "Missing required fields: Customer, Date, At least one line item"
-- **Credit exceeded:** "Order exceeds customer credit limit. Order Total: $X. Available Credit: $Y. Please contact Credit Management for approval."
+| Code | Message |
+|------|---------|
+| `OTC_MISSING_FIELDS` | "Missing required fields: Customer, Date, At least one line item" |
+| `OTC_CREDIT_LIMIT_EXCEEDED` | "Order exceeds customer credit limit. Order Total: $X. Available Credit: $Y. Please contact Credit Management for approval." |
+
+All errors use `N/error.create()` with named codes for consistent handling and logging.
 
 ## Testing Notes
 
@@ -94,11 +110,21 @@ When working with sales orders, users need:
 3. Try to save order exceeding limit - verify error blocks save
 4. Save large order (≥ $10K) - verify task is created
 
+## Script Parameters
+
+| Parameter ID | Type | Default | Purpose |
+|--------------|------|---------|---------|
+| `custscript_otc_large_order_amt` | FLOAT | 10000 | Threshold for creating follow-up tasks |
+| `custscript_otc_credit_warn_pct` | FLOAT | 70 | Percentage at which "Near Limit" warning appears |
+| `custscript_otc_task_assignee` | SELECT (Employee) | — | Default task assignee if sales rep not set |
+
 ## Dependencies
 
 - `N/record` - For creating Task records
+- `N/runtime` - For reading script parameters
 - `N/search` - For looking up customer credit data
 - `N/ui/serverWidget` - For adding inline HTML field
+- `N/error` - For creating named errors
 - `OTC_Lib_Utils` - Credit calculation utilities
 
 ## Governance Impact
