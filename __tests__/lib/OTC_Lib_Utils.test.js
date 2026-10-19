@@ -3,17 +3,14 @@
  * Tests pure utility functions used across Order-to-Cash Toolkit
  */
 
-// Load the module directly for testing (bypassing AMD)
 const fs = require('fs');
 const path = require('path');
 
-// Extract the module factory from the AMD define
 const moduleContent = fs.readFileSync(
   path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
   'utf8'
 );
 
-// Execute the define call and capture the factory
 let moduleFactory;
 // eslint-disable-next-line no-unused-vars
 const mockDefine = (deps, factory) => {
@@ -24,6 +21,36 @@ eval(moduleContent.replace('define(', 'mockDefine('));
 const utils = moduleFactory();
 
 describe('OTC_Lib_Utils', () => {
+
+  describe('escapeHtml', () => {
+    it('should escape HTML special characters', () => {
+      expect(utils.escapeHtml('<script>alert("xss")</script>'))
+        .toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;&#x2F;script&gt;');
+    });
+
+    it('should escape ampersands', () => {
+      expect(utils.escapeHtml('Tom & Jerry')).toBe('Tom &amp; Jerry');
+    });
+
+    it('should escape single quotes', () => {
+      expect(utils.escapeHtml("it's")).toBe('it&#x27;s');
+    });
+
+    it('should return empty string for null/undefined', () => {
+      expect(utils.escapeHtml(null)).toBe('');
+      expect(utils.escapeHtml(undefined)).toBe('');
+      expect(utils.escapeHtml('')).toBe('');
+    });
+
+    it('should return empty string for non-strings', () => {
+      expect(utils.escapeHtml(123)).toBe('');
+      expect(utils.escapeHtml({})).toBe('');
+    });
+
+    it('should pass through safe strings unchanged', () => {
+      expect(utils.escapeHtml('Hello World')).toBe('Hello World');
+    });
+  });
 
   describe('calculateCreditUtilization', () => {
     it('should return correct utilization percentage', () => {
@@ -70,6 +97,11 @@ describe('OTC_Lib_Utils', () => {
       const status = utils.getCreditStatus(null);
       expect(status.label).toBe('No Credit Limit');
     });
+
+    it('should accept custom thresholds', () => {
+      const status = utils.getCreditStatus(0.75, 0.7, 0.8);
+      expect(status.label).toBe('Near Limit');
+    });
   });
 
   describe('wouldExceedCreditLimit', () => {
@@ -107,7 +139,7 @@ describe('OTC_Lib_Utils', () => {
   });
 
   describe('isLargeOrder', () => {
-    it('should identify large orders', () => {
+    it('should identify large orders using default threshold', () => {
       expect(utils.isLargeOrder(15000)).toBe(true);
       expect(utils.isLargeOrder(10000)).toBe(true);
     });
@@ -137,6 +169,14 @@ describe('OTC_Lib_Utils', () => {
       expect(utils.getDiscountTier(0)).toBe(0);
       expect(utils.getDiscountTier(null)).toBe(0);
       expect(utils.getDiscountTier('50')).toBe(0.10);
+    });
+
+    it('should accept custom tiers', () => {
+      const customTiers = [
+        { minQty: 10, discount: 0.20 },
+        { minQty: 0, discount: 0 }
+      ];
+      expect(utils.getDiscountTier(15, customTiers)).toBe(0.20);
     });
   });
 
@@ -244,6 +284,11 @@ describe('OTC_Lib_Utils', () => {
     it('should return false when capacity is low', () => {
       expect(utils.hasGovernanceCapacity(50, 100)).toBe(false);
     });
+
+    it('should use default threshold', () => {
+      expect(utils.hasGovernanceCapacity(300)).toBe(true);
+      expect(utils.hasGovernanceCapacity(100)).toBe(false);
+    });
   });
 
   describe('buildErrorResponse', () => {
@@ -284,6 +329,14 @@ describe('OTC_Lib_Utils', () => {
     it('should return null for invalid JSON', () => {
       expect(utils.safeParseJSON('invalid')).toBeNull();
       expect(utils.safeParseJSON('')).toBeNull();
+    });
+  });
+
+  describe('DEFAULTS', () => {
+    it('should export default configuration values', () => {
+      expect(utils.DEFAULTS.LARGE_ORDER_THRESHOLD).toBe(10000);
+      expect(utils.DEFAULTS.CREDIT_WARNING_PERCENT).toBe(0.9);
+      expect(utils.DEFAULTS.GOVERNANCE_THRESHOLD).toBe(200);
     });
   });
 

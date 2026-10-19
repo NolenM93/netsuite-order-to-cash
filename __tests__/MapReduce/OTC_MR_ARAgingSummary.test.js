@@ -3,7 +3,9 @@
  * Tests Map/Reduce script for AR aging summary
  */
 
-// Mock N/ modules
+const fs = require('fs');
+const path = require('path');
+
 const mockSearch = {
   create: jest.fn().mockReturnValue({
     run: jest.fn().mockReturnValue({
@@ -19,16 +21,7 @@ const mockRecord = {
   load: jest.fn()
 };
 
-const mockRuntime = {
-  getCurrentScript: jest.fn(() => ({
-    getRemainingUsage: jest.fn().mockReturnValue(1000)
-  }))
-};
-
 // Load utils module
-const fs = require('fs');
-const path = require('path');
-
 const utilsContent = fs.readFileSync(
   path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
   'utf8'
@@ -53,7 +46,6 @@ const mockDefine = (deps, factory) => {
   scriptFactory = factory;
 };
 
-// Mock log globally
 global.log = {
   debug: jest.fn(),
   audit: jest.fn(),
@@ -67,24 +59,22 @@ describe('OTC_MR_ARAgingSummary', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    script = scriptFactory(mockSearch, mockRecord, mockRuntime, utils);
+    script = scriptFactory(mockSearch, mockRecord, utils);
   });
 
   describe('getInputData', () => {
     it('should return a search object for open invoices', () => {
-      script.getInputData();
+      const result = script.getInputData();
 
       expect(mockSearch.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'invoice'
-        })
+        expect.objectContaining({ type: 'invoice' })
       );
 
       expect(global.log.audit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'AR Aging Summary - getInputData'
-        })
+        expect.objectContaining({ title: 'AR Aging Summary - getInputData' })
       );
+
+      expect(result).toBeDefined();
     });
   });
 
@@ -97,8 +87,8 @@ describe('OTC_MR_ARAgingSummary', () => {
         key: '1',
         value: JSON.stringify({
           values: {
-            'GROUP(internalid.customer)': { value: '123' },
-            'GROUP(companyname.customer)': 'Test Customer',
+            'internalid.customer': { value: '123' },
+            'companyname.customer': 'Test Customer',
             duedate: pastDue.toISOString().split('T')[0],
             amountremaining: '1500.00',
             tranid: 'INV-001',
@@ -124,7 +114,7 @@ describe('OTC_MR_ARAgingSummary', () => {
         key: '1',
         value: JSON.stringify({
           values: {
-            'GROUP(internalid.customer)': null,
+            'internalid.customer': null,
             duedate: '2024-01-01',
             amountremaining: '1000'
           }
@@ -133,7 +123,6 @@ describe('OTC_MR_ARAgingSummary', () => {
       };
 
       script.map(mockContext);
-
       expect(mockContext.write).not.toHaveBeenCalled();
     });
 
@@ -147,9 +136,7 @@ describe('OTC_MR_ARAgingSummary', () => {
       script.map(mockContext);
 
       expect(global.log.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Map Error'
-        })
+        expect.objectContaining({ title: 'Map Error' })
       );
     });
   });
@@ -329,15 +316,11 @@ describe('OTC_MR_ARAgingSummary', () => {
       script.summarize(mockSummary);
 
       expect(global.log.audit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'AR Aging Summary - Summarize'
-        })
+        expect.objectContaining({ title: 'AR Aging Summary - Summarize' })
       );
 
       expect(global.log.audit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Processing Results'
-        })
+        expect.objectContaining({ title: 'Processing Results' })
       );
     });
 

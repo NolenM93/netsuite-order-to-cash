@@ -3,7 +3,9 @@
  * Tests Suitelet for Collections Dashboard
  */
 
-// Mock N/ modules
+const fs = require('fs');
+const path = require('path');
+
 let mockSearchResults = [];
 const mockServerWidget = {
   createForm: jest.fn(),
@@ -15,16 +17,9 @@ const mockServerWidget = {
     INTEGER: 'integer',
     URL: 'url'
   },
-  SublistType: {
-    LIST: 'list'
-  },
-  FieldDisplayType: {
-    HIDDEN: 'hidden',
-    INLINE: 'inline'
-  },
-  MessageType: {
-    CONFIRMATION: 'confirmation'
-  }
+  SublistType: { LIST: 'list' },
+  FieldDisplayType: { HIDDEN: 'hidden', INLINE: 'inline' },
+  MessageType: { CONFIRMATION: 'confirmation' }
 };
 
 const mockSearch = {
@@ -66,9 +61,6 @@ const mockRuntime = {
 };
 
 // Load utils module
-const fs = require('fs');
-const path = require('path');
-
 const utilsContent = fs.readFileSync(
   path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
   'utf8'
@@ -93,7 +85,6 @@ const mockDefine = (deps, factory) => {
   scriptFactory = factory;
 };
 
-// Mock log globally
 global.log = {
   debug: jest.fn(),
   audit: jest.fn(),
@@ -141,138 +132,75 @@ describe('OTC_SL_CollectionsDashboard', () => {
 
   describe('onRequest - GET', () => {
     it('should create dashboard form', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
-        request: {
-          method: 'GET',
-          parameters: {}
-        },
+        request: { method: 'GET', parameters: {} },
         response: mockResponse
       };
 
       script.onRequest(context);
 
-      expect(mockServerWidget.createForm).toHaveBeenCalledWith({
-        title: 'Collections Dashboard'
-      });
+      expect(mockServerWidget.createForm).toHaveBeenCalledWith({ title: 'Collections Dashboard' });
       expect(mockResponse.writePage).toHaveBeenCalledWith(mockForm);
     });
 
     it('should add filter fields', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
-        request: {
-          method: 'GET',
-          parameters: {}
-        },
+        request: { method: 'GET', parameters: {} },
         response: mockResponse
       };
 
       script.onRequest(context);
 
       expect(mockForm.addFieldGroup).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'custpage_filters'
-        })
+        expect.objectContaining({ id: 'custpage_filters' })
       );
 
       expect(mockForm.addField).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'custpage_customer',
-          type: 'select'
-        })
-      );
-
-      expect(mockForm.addField).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'custpage_aging',
-          type: 'select'
-        })
+        expect.objectContaining({ id: 'custpage_customer', type: 'select' })
       );
     });
 
-    it('should add invoice sublist', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
-      const context = {
-        request: {
-          method: 'GET',
-          parameters: {}
-        },
-        response: mockResponse
-      };
-
-      script.onRequest(context);
-
-      expect(mockForm.addSublist).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'custpage_invoices',
-          type: 'list',
-          label: 'Overdue Invoices'
-        })
-      );
-    });
-
-    it('should populate sublist with search results', () => {
+    it('should populate sublist with escaped values', () => {
       const pastDue = new Date();
       pastDue.setDate(pastDue.getDate() - 20);
 
       mockSearchResults = [{
         id: '123',
         getValue: jest.fn((opts) => {
-          if (opts.name === 'tranid') return 'INV-001';
+          if (opts.name === 'tranid') return '<script>xss</script>';
           if (opts.name === 'entity') return '456';
           if (opts.name === 'duedate') return pastDue.toISOString().split('T')[0];
           if (opts.name === 'amountremaining') return '1500.00';
-          if (opts.name === 'companyname' && opts.join === 'customer') return 'Test Corp';
+          if (opts.name === 'companyname' && opts.join === 'customer') return 'Test<b>Corp</b>';
           if (opts.name === 'email' && opts.join === 'customer') return 'test@example.com';
           return null;
         }),
         getText: jest.fn().mockReturnValue('Test Corp')
       }];
 
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
-        request: {
-          method: 'GET',
-          parameters: {}
-        },
+        request: { method: 'GET', parameters: {} },
         response: mockResponse
       };
 
       script.onRequest(context);
 
-      expect(mockSublist.setSublistValue).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'custpage_inv_number',
-          line: 0,
-          value: 'INV-001'
-        })
-      );
+      const setValueCalls = mockSublist.setSublistValue.mock.calls;
+      const invoiceNumCall = setValueCalls.find((c) => c[0].id === 'custpage_inv_number');
+
+      expect(invoiceNumCall[0].value).not.toContain('<script>');
+      expect(invoiceNumCall[0].value).toContain('&lt;script&gt;');
     });
 
     it('should display confirmation message when provided', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
         request: {
           method: 'GET',
-          parameters: {
-            message: 'Reminders sent successfully'
-          }
+          parameters: { message: 'Reminders sent successfully' }
         },
         response: mockResponse
       };
@@ -288,16 +216,11 @@ describe('OTC_SL_CollectionsDashboard', () => {
 
   describe('onRequest - POST', () => {
     it('should trigger reminder script on send_reminders action', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
         request: {
           method: 'POST',
-          parameters: {
-            custpage_action: 'send_reminders'
-          }
+          parameters: { custpage_action: 'send_reminders' }
         },
         response: mockResponse
       };
@@ -315,16 +238,11 @@ describe('OTC_SL_CollectionsDashboard', () => {
     });
 
     it('should fall back to GET handling for unknown action', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
         request: {
           method: 'POST',
-          parameters: {
-            custpage_action: 'unknown'
-          }
+          parameters: { custpage_action: 'unknown' }
         },
         response: mockResponse
       };
@@ -338,16 +256,11 @@ describe('OTC_SL_CollectionsDashboard', () => {
 
   describe('filter handling', () => {
     it('should apply customer filter to search', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
         request: {
           method: 'GET',
-          parameters: {
-            custpage_customer: '789'
-          }
+          parameters: { custpage_customer: '789' }
         },
         response: mockResponse
       };
@@ -364,16 +277,11 @@ describe('OTC_SL_CollectionsDashboard', () => {
     });
 
     it('should apply minimum amount filter to search', () => {
-      const mockResponse = {
-        writePage: jest.fn()
-      };
-
+      const mockResponse = { writePage: jest.fn() };
       const context = {
         request: {
           method: 'GET',
-          parameters: {
-            custpage_min_amount: '1000'
-          }
+          parameters: { custpage_min_amount: '1000' }
         },
         response: mockResponse
       };

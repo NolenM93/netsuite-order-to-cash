@@ -3,7 +3,9 @@
  * Tests Scheduled Script for overdue invoice reminders
  */
 
-// Mock N/ modules
+const fs = require('fs');
+const path = require('path');
+
 let mockSearchResults = [];
 const mockSearch = {
   create: jest.fn().mockReturnValue({
@@ -27,18 +29,12 @@ const mockEmail = {
 const mockRuntime = {
   getCurrentUser: jest.fn(() => ({ id: 1 })),
   getCurrentScript: jest.fn(() => ({
-    getRemainingUsage: jest.fn().mockReturnValue(1000)
+    getRemainingUsage: jest.fn().mockReturnValue(1000),
+    getParameter: jest.fn().mockReturnValue(null)
   }))
 };
 
-const mockRecord = {};
-
-const mockRender = {};
-
 // Load utils module
-const fs = require('fs');
-const path = require('path');
-
 const utilsContent = fs.readFileSync(
   path.join(__dirname, '../../src/FileCabinet/SuiteScripts/OrderToCash/lib/OTC_Lib_Utils.js'),
   'utf8'
@@ -63,7 +59,6 @@ const mockDefine = (deps, factory) => {
   scriptFactory = factory;
 };
 
-// Mock log globally
 global.log = {
   debug: jest.fn(),
   audit: jest.fn(),
@@ -80,9 +75,10 @@ describe('OTC_SS_OverdueReminder', () => {
     mockSearchResults = [];
     mockEmail.send.mockImplementation(() => {});
     mockRuntime.getCurrentScript.mockReturnValue({
-      getRemainingUsage: jest.fn().mockReturnValue(1000)
+      getRemainingUsage: jest.fn().mockReturnValue(1000),
+      getParameter: jest.fn().mockReturnValue(null)
     });
-    script = scriptFactory(mockSearch, mockEmail, mockRuntime, mockRecord, mockRender, utils);
+    script = scriptFactory(mockSearch, mockEmail, mockRuntime, utils);
   });
 
   describe('execute', () => {
@@ -90,15 +86,10 @@ describe('OTC_SS_OverdueReminder', () => {
       script.execute({});
 
       expect(global.log.audit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Overdue Reminder - Started'
-        })
+        expect.objectContaining({ title: 'Overdue Reminder - Started' })
       );
-
       expect(global.log.audit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Overdue Reminder - Completed'
-        })
+        expect.objectContaining({ title: 'Overdue Reminder - Completed' })
       );
     });
 
@@ -106,9 +97,7 @@ describe('OTC_SS_OverdueReminder', () => {
       script.execute({});
 
       expect(mockSearch.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'invoice'
-        })
+        expect.objectContaining({ type: 'invoice' })
       );
     });
 
@@ -157,9 +146,7 @@ describe('OTC_SS_OverdueReminder', () => {
 
       expect(mockEmail.send).not.toHaveBeenCalled();
       expect(global.log.debug).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Skipped - No Valid Email'
-        })
+        expect.objectContaining({ title: 'Skipped - No Valid Email' })
       );
     });
 
@@ -188,9 +175,7 @@ describe('OTC_SS_OverdueReminder', () => {
       script.execute({});
 
       expect(global.log.error).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Invoice Processing Error'
-        })
+        expect.objectContaining({ title: 'Invoice Processing Error' })
       );
     });
 
@@ -198,7 +183,8 @@ describe('OTC_SS_OverdueReminder', () => {
       mockRuntime.getCurrentScript.mockReturnValue({
         getRemainingUsage: jest.fn()
           .mockReturnValueOnce(1000)
-          .mockReturnValueOnce(100)
+          .mockReturnValueOnce(100),
+        getParameter: jest.fn().mockReturnValue(null)
       });
 
       const pastDue = new Date();
@@ -232,9 +218,7 @@ describe('OTC_SS_OverdueReminder', () => {
       script.execute({});
 
       expect(global.log.audit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Governance Limit Approaching'
-        })
+        expect.objectContaining({ title: 'Governance Limit Approaching' })
       );
     });
 
@@ -264,6 +248,45 @@ describe('OTC_SS_OverdueReminder', () => {
       expect(emailCall.body).toContain('Acme Corp');
       expect(emailCall.relatedRecords.transactionId).toBe('123');
       expect(emailCall.relatedRecords.entityId).toBe('456');
+    });
+
+    it('should escape HTML in email body', () => {
+      const pastDue = new Date();
+      pastDue.setDate(pastDue.getDate() - 15);
+
+      mockSearchResults = [{
+        id: '123',
+        getValue: jest.fn((opts) => {
+          if (opts.name === 'tranid') return '<script>alert("xss")</script>';
+          if (opts.name === 'email' && opts.join === 'customer') return 'test@example.com';
+          if (opts.name === 'companyname' && opts.join === 'customer') return '<b>Evil Corp</b>';
+          if (opts.name === 'duedate') return pastDue.toISOString().split('T')[0];
+          if (opts.name === 'amountremaining') return '1500.00';
+          if (opts.name === 'internalid' && opts.join === 'customer') return '456';
+          return null;
+        })
+      }];
+
+      script.execute({});
+
+      const emailCall = mockEmail.send.mock.calls[0][0];
+      expect(emailCall.body).not.toContain('<script>');
+      expect(emailCall.body).toContain('&lt;script&gt;');
+    });
+
+    it('should use custom batch size from parameter', () => {
+      mockRuntime.getCurrentScript.mockReturnValue({
+        getRemainingUsage: jest.fn().mockReturnValue(1000),
+        getParameter: jest.fn((opts) => {
+          if (opts.name === 'custscript_otc_batch_size') return 100;
+          return null;
+        })
+      });
+
+      script = scriptFactory(mockSearch, mockEmail, mockRuntime, utils);
+      script.execute({});
+
+      expect(mockSearch.create).toHaveBeenCalled();
     });
   });
 });
